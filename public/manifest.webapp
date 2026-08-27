@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "name": "Physics Demolition",
+  "description": "Box2D C++ Physics Catapult Game compiled for KaiOS and Web browsers",
+  "type": "web",
+  "launch_path": "/index.html",
+  "icons": {
+    "56": "/icon56.png",
+    "112": "/icon112.png"
+  },
+  "developer": {
+    "name": "Physics Dev",
+    "url": "https://github.com/Chijioke12/Cpppy"
+  },
+  "default_locale": "en-US",
+  "locales": {
+    "en-US": {
+      "name": "Physics Demolition",
+      "description": "Box2D C++ Physics Catapult Game for KaiOS"
+    }
+  },
+  "fullscreen": "true",
+  "orientation": "landscape"
+}

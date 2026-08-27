@@ -66,36 +66,34 @@ The compiled output will be generated in `dist/`:
 - `index.js` (JavaScript glue code)
 - `index.wasm` (Compiled WebAssembly binary)
 
-### 2. Build Natively (Desktop Linux / macOS / Windows)
+### 3. Build for KaiOS 2.5 (Pure asm.js / Gecko 48)
 
-You can also compile and run the engine natively as a standard C++ desktop application using your system's C++ compiler and SDL2:
+KaiOS 2.5 devices (such as JioPhone, Nokia 8110 4G, Nokia 2720 Flip) run Gecko 48 without WebAssembly support. To build for KaiOS using Emscripten (e.g. `1.38.x` or with `-s WASM=0`):
 
 ```bash
-# Install SDL2 development libraries:
-# Ubuntu/Debian: sudo apt-get install libsdl2-dev
-# macOS: brew install sdl2
-
-# Compile native binary:
-make native
-
-# Run the game:
-./physics_game
+# Build pure asm.js and bundle manifest.webapp
+./build.sh kaios
 ```
+
+The output in `dist/` will contain:
+- `index.html` (KaiOS-compatible shell)
+- `index.js` (Pure `"use asm";` JavaScript engine)
+- `index.js.mem` (Memory initialization heap)
+- `manifest.webapp` (Packaged app manifest for KaiOS app store / OmniSD)
 
 ---
 
-## 🎮 Controls & Hotkeys
+## 🎮 Controls & Hotkeys (Desktop & KaiOS D-Pad)
 
-| Key / Action | Description |
-| :--- | :--- |
-| `1` – `5` | Switch between Levels 1 to 5 |
-| `R` | Reset current level |
-| `T` | Toggle Slow-Motion (0.25x / 1.0x) |
-| `G` | Cycle Gravity (Earth 9.8m/s² &bull; Zero-G &bull; Moon 1.6m/s²) |
-| `TAB` | Cycle Active Tool (Slingshot &bull; Drag &bull; Spawn &bull; Explode) |
-| `Space` | Detonate first active TNT block |
-| **Left Click + Drag** | Aim Slingshot / Drag Rigid Body / Spawn Entities |
-| **Fullscreen Button** | Toggle full browser canvas expansion |
+| Action | Desktop Key | KaiOS Physical Keypad |
+| :--- | :--- | :--- |
+| **Aim Slingshot** | Mouse Drag | `Up` / `Down` / `Left` / `Right` (D-Pad) |
+| **Fire Slingshot** | Release Click | `Enter` / `OK` / `5` (Center Key) |
+| **In-Flight Ability** | `Space` / Click | `Enter` / `OK` / `5` |
+| **Select Level (1-5)**| `1` – `5` | `1` – `5` Number Keys |
+| **Reset Level** | `R` | `Backspace` / `SoftRight` |
+| **Next Level** | `N` | `F2` / `SoftRight` |
+| **Toggle Slow-Mo** | `T` | `F1` / `SoftLeft` |
 
 ---
 

@@ -641,16 +641,47 @@ static void mainLoop() {
             SDL_Keycode key = event.key.keysym.sym;
             if (key >= SDLK_1 && key <= SDLK_5) {
                 loadLevel(key - SDLK_1 + 1);
-            } else if (key == SDLK_r) {
+            } else if (key == SDLK_r || key == SDLK_BACKSPACE) {
                 loadLevel(g_currentLevel);
-            } else if (key == SDLK_n) {
+            } else if (key == SDLK_n || key == SDLK_F2) {
                 int nextLvl = (g_currentLevel < 5) ? g_currentLevel + 1 : 1;
                 loadLevel(nextLvl);
-            } else if (key == SDLK_t) {
+            } else if (key == SDLK_t || key == SDLK_F1) {
                 g_world.timeScale = (g_world.timeScale < 1.0f) ? 1.0f : 0.25f;
-            } else if (key == SDLK_SPACE) {
+            } else if (key == SDLK_SPACE || key == SDLK_RETURN || key == SDLK_KP_ENTER) {
                 if (g_activeFlightBird && !g_activeFlightBird->isDead && !g_activeFlightBird->abilityUsed) {
                     triggerBirdAbility();
+                } else if (!g_activeFlightBird && !g_levelWon && !g_levelLost) {
+                    if (!g_isAiming) {
+                        g_isAiming = true;
+                        g_aimPos = g_slingshotPos + Vector2(-60.0f, 30.0f);
+                    } else {
+                        launchBird();
+                    }
+                } else if (g_levelWon) {
+                    int nextLvl = (g_currentLevel < 5) ? g_currentLevel + 1 : 1;
+                    loadLevel(nextLvl);
+                } else if (g_levelLost) {
+                    loadLevel(g_currentLevel);
+                }
+            } else if (key == SDLK_LEFT || key == SDLK_UP || key == SDLK_RIGHT || key == SDLK_DOWN) {
+                // KaiOS D-Pad Slingshot Aiming Controls
+                if (!g_activeFlightBird && !g_levelWon && !g_levelLost) {
+                    if (!g_isAiming) {
+                        g_isAiming = true;
+                        g_aimPos = g_slingshotPos;
+                    }
+                    Vector2 pullDelta(0, 0);
+                    if (key == SDLK_LEFT)  pullDelta.x -= 8.0f;
+                    if (key == SDLK_RIGHT) pullDelta.x += 8.0f;
+                    if (key == SDLK_UP)    pullDelta.y -= 8.0f;
+                    if (key == SDLK_DOWN)  pullDelta.y += 8.0f;
+
+                    Vector2 newPull = (g_aimPos + pullDelta) - g_slingshotPos;
+                    if (newPull.length() > MAX_PULL_DISTANCE) {
+                        newPull = newPull.normalized() * MAX_PULL_DISTANCE;
+                    }
+                    g_aimPos = g_slingshotPos + newPull;
                 }
             }
         }
