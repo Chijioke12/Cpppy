@@ -378,65 +378,64 @@ static void renderGame() {
     // HUD & UI Top Header Bar
     // -------------------------------------------------------------
     // Top banner backdrop
-    SDL_Rect hudRect = { 0, 0, SCREEN_WIDTH, 64 };
-    SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 225);
+    SDL_Rect hudRect = { 0, 0, SCREEN_WIDTH, 68 };
+    SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 235);
     SDL_RenderFillRect(g_renderer, &hudRect);
 
     SDL_SetRenderDrawColor(g_renderer, 245, 158, 11, 255);
-    SDL_RenderDrawLine(g_renderer, 0, 64, SCREEN_WIDTH, 64);
+    SDL_RenderDrawLine(g_renderer, 0, 68, SCREEN_WIDTH, 68);
 
     // Level Title & Description
-    std::string titleStr = "LEVEL " + std::to_string(g_currentLevel) + ": " + g_currentLevelInfo.name;
-    GameRenderer::drawText(g_renderer, titleStr, 20, 16, 2, { 254, 240, 138, 255 });
-    GameRenderer::drawText(g_renderer, g_currentLevelInfo.description, 20, 42, 1, { 203, 213, 225, 255 });
+    std::string titleStr = "LVL " + std::to_string(g_currentLevel) + ": " + g_currentLevelInfo.name;
+    GameRenderer::drawText(g_renderer, titleStr, 18, 12, 2, { 254, 240, 138, 255 });
+    GameRenderer::drawText(g_renderer, g_currentLevelInfo.description, 18, 40, 2, { 203, 213, 225, 255 });
 
     // Score & Targets
     std::string scoreStr = "SCORE: " + std::to_string(g_world.totalScore);
-    GameRenderer::drawText(g_renderer, scoreStr, 400, 18, 2, { 255, 255, 255, 255 });
+    GameRenderer::drawText(g_renderer, scoreStr, 420, 12, 2, { 255, 255, 255, 255 });
 
-    std::string targetStr = "TARGETS: " + std::to_string(g_world.targetsRemaining) + " / " + std::to_string(g_world.totalTargets);
+    std::string targetStr = "PIGS: " + std::to_string(g_world.targetsRemaining) + " / " + std::to_string(g_world.totalTargets);
     SDL_Color targetCol = (g_world.targetsRemaining == 0) ? SDL_Color{ 118, 255, 3, 255 } : SDL_Color{ 255, 82, 82, 255 };
-    GameRenderer::drawText(g_renderer, targetStr, 400, 42, 1, targetCol);
+    GameRenderer::drawText(g_renderer, targetStr, 420, 40, 2, targetCol);
 
     // Quick Level Select Buttons [1] [2] [3] [4] [5]
-    GameRenderer::drawText(g_renderer, "LEVELS:", 680, 24, 1, { 148, 163, 184, 255 });
     for (int lvl = 1; lvl <= 5; ++lvl) {
-        SDL_Rect btnRect = { 740 + (lvl - 1) * 36, 16, 28, 28 };
+        SDL_Rect btnRect = { 720 + (lvl - 1) * 42, 14, 34, 38 };
         if (lvl == g_currentLevel) {
             SDL_SetRenderDrawColor(g_renderer, 245, 158, 11, 255);
         } else {
             SDL_SetRenderDrawColor(g_renderer, 51, 65, 85, 255);
         }
         SDL_RenderFillRect(g_renderer, &btnRect);
-        SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 200);
+        SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 220);
         SDL_RenderDrawRect(g_renderer, &btnRect);
 
         std::string num = std::to_string(lvl);
         SDL_Color txtCol = (lvl == g_currentLevel) ? SDL_Color{ 15, 23, 42, 255 } : SDL_Color{ 255, 255, 255, 255 };
-        GameRenderer::drawText(g_renderer, num, btnRect.x + 8, btnRect.y + 6, 2, txtCol);
+        GameRenderer::drawText(g_renderer, num, btnRect.x + 10, btnRect.y + 7, 2, txtCol, false);
     }
 
     // Reset & Slow-Mo Indicators
-    GameRenderer::drawText(g_renderer, "[R] RESET", 940, 16, 1, { 226, 232, 240, 255 });
-    std::string slowMoTxt = (g_world.timeScale < 1.0f) ? "[T] SLOW-MO: ON" : "[T] SLOW-MO";
-    SDL_Color slowCol = (g_world.timeScale < 1.0f) ? SDL_Color{ 0, 230, 118, 255 } : SDL_Color{ 148, 163, 184, 255 };
-    GameRenderer::drawText(g_renderer, slowMoTxt, 940, 36, 1, slowCol);
+    GameRenderer::drawText(g_renderer, "[SoftRight] RESET", 936, 14, 1, { 248, 113, 113, 255 });
+    std::string slowMoTxt = (g_world.timeScale < 1.0f) ? "[SoftLeft] SLOW: ON" : "[SoftLeft] SLOW";
+    SDL_Color slowCol = (g_world.timeScale < 1.0f) ? SDL_Color{ 0, 230, 118, 255 } : SDL_Color{ 56, 189, 248, 255 };
+    GameRenderer::drawText(g_renderer, slowMoTxt, 936, 38, 1, slowCol);
 
     // In-Flight Special Ability Banner Hint
     if (g_activeFlightBird && !g_activeFlightBird->isDead && !g_activeFlightBird->abilityUsed) {
-        SDL_Rect tipRect = { SCREEN_WIDTH / 2 - 210, 80, 420, 36 };
-        SDL_SetRenderDrawColor(g_renderer, 220, 38, 38, 230);
+        SDL_Rect tipRect = { SCREEN_WIDTH / 2 - 240, 80, 480, 44 };
+        SDL_SetRenderDrawColor(g_renderer, 220, 38, 38, 240);
         SDL_RenderFillRect(g_renderer, &tipRect);
         SDL_SetRenderDrawColor(g_renderer, 254, 240, 138, 255);
         SDL_RenderDrawRect(g_renderer, &tipRect);
 
-        std::string abilityHint = "PRESS ENTER / CLICK: SPECIAL ABILITY!";
-        if (g_activeBirdType == 1) abilityHint = "PRESS ENTER / CLICK: DETONATE BOMB!";
-        if (g_activeBirdType == 2) abilityHint = "PRESS ENTER / CLICK: TRIPLE SPLIT!";
-        if (g_activeBirdType == 3) abilityHint = "PRESS ENTER / CLICK: DRILL THRUST!";
-        if (g_activeBirdType == 4) abilityHint = "PRESS ENTER / CLICK: SLAM BOUNCE!";
+        std::string abilityHint = "PRESS ENTER: SPECIAL ABILITY!";
+        if (g_activeBirdType == 1) abilityHint = "PRESS ENTER: DETONATE BOMB!";
+        if (g_activeBirdType == 2) abilityHint = "PRESS ENTER: TRIPLE SPLIT!";
+        if (g_activeBirdType == 3) abilityHint = "PRESS ENTER: DRILL THRUST!";
+        if (g_activeBirdType == 4) abilityHint = "PRESS ENTER: SLAM BOUNCE!";
 
-        GameRenderer::drawText(g_renderer, abilityHint, tipRect.x + 18, tipRect.y + 10, 1, { 255, 255, 255, 255 });
+        GameRenderer::drawText(g_renderer, abilityHint, tipRect.x + 24, tipRect.y + 11, 2, { 255, 255, 255, 255 });
     }
 
     // -------------------------------------------------------------
@@ -445,13 +444,13 @@ static void renderGame() {
     if (g_levelWon) {
         g_victoryAnimTimer += 0.016f;
 
-        SDL_Rect modalRect = { SCREEN_WIDTH / 2 - 250, SCREEN_HEIGHT / 2 - 160, 500, 320 };
-        SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 240);
+        SDL_Rect modalRect = { SCREEN_WIDTH / 2 - 270, SCREEN_HEIGHT / 2 - 165, 540, 330 };
+        SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 245);
         SDL_RenderFillRect(g_renderer, &modalRect);
         SDL_SetRenderDrawColor(g_renderer, 245, 158, 11, 255);
         SDL_RenderDrawRect(g_renderer, &modalRect);
 
-        GameRenderer::drawText(g_renderer, "VICTORY! LEVEL CLEARED", modalRect.x + 60, modalRect.y + 35, 2, { 254, 240, 138, 255 });
+        GameRenderer::drawText(g_renderer, "VICTORY! LEVEL CLEARED", modalRect.x + 50, modalRect.y + 30, 3, { 254, 240, 138, 255 });
 
         // Draw 3 Animated Stars
         int starCount = 1;
@@ -459,43 +458,49 @@ static void renderGame() {
         if (g_world.totalScore >= g_currentLevelInfo.targetScoreGoal) starCount = 3;
 
         for (int s = 0; s < 3; ++s) {
-            float starX = modalRect.x + 160 + s * 90;
+            float starX = modalRect.x + 180 + s * 95;
             float starY = modalRect.y + 115;
             if (s < starCount && g_victoryAnimTimer > (0.3f + s * 0.3f)) {
-                tm.draw("vfx_star", starX, starY, 64.0f, 64.0f);
+                tm.draw("vfx_star", starX, starY, 68.0f, 68.0f);
             } else {
-                GameRenderer::drawFilledCircle(g_renderer, (int)starX, (int)starY, 18, { 71, 85, 105, 255 });
+                GameRenderer::drawFilledCircle(g_renderer, (int)starX, (int)starY, 20, { 71, 85, 105, 255 });
             }
         }
 
         std::string finalScoreStr = "FINAL SCORE: " + std::to_string(g_world.totalScore);
-        GameRenderer::drawText(g_renderer, finalScoreStr, modalRect.x + 120, modalRect.y + 175, 2, { 255, 255, 255, 255 });
+        GameRenderer::drawText(g_renderer, finalScoreStr, modalRect.x + 95, modalRect.y + 175, 3, { 255, 255, 255, 255 });
 
-        // Next Level Button
-        SDL_Rect nextBtn = { modalRect.x + 80, modalRect.y + 225, 150, 48 };
+        // Next Level Button [SoftLeft]
+        SDL_Rect nextBtn = { modalRect.x + 50, modalRect.y + 235, 200, 56 };
         SDL_SetRenderDrawColor(g_renderer, 16, 185, 129, 255);
         SDL_RenderFillRect(g_renderer, &nextBtn);
-        GameRenderer::drawText(g_renderer, "NEXT LEVEL", nextBtn.x + 20, nextBtn.y + 16, 1, { 255, 255, 255, 255 });
+        SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 200);
+        SDL_RenderDrawRect(g_renderer, &nextBtn);
+        GameRenderer::drawText(g_renderer, "NEXT [SoftLeft]", nextBtn.x + 14, nextBtn.y + 18, 2, { 255, 255, 255, 255 });
 
-        // Replay Button
-        SDL_Rect repBtn = { modalRect.x + 270, modalRect.y + 225, 150, 48 };
+        // Replay Button [SoftRight]
+        SDL_Rect repBtn = { modalRect.x + 290, modalRect.y + 235, 200, 56 };
         SDL_SetRenderDrawColor(g_renderer, 71, 85, 105, 255);
         SDL_RenderFillRect(g_renderer, &repBtn);
-        GameRenderer::drawText(g_renderer, "REPLAY [R]", repBtn.x + 28, repBtn.y + 16, 1, { 255, 255, 255, 255 });
+        SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 200);
+        SDL_RenderDrawRect(g_renderer, &repBtn);
+        GameRenderer::drawText(g_renderer, "RETRY [SoftRight]", repBtn.x + 10, repBtn.y + 18, 2, { 255, 255, 255, 255 });
     } else if (g_levelLost) {
-        SDL_Rect modalRect = { SCREEN_WIDTH / 2 - 220, SCREEN_HEIGHT / 2 - 120, 440, 240 };
-        SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 240);
+        SDL_Rect modalRect = { SCREEN_WIDTH / 2 - 260, SCREEN_HEIGHT / 2 - 140, 520, 280 };
+        SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 245);
         SDL_RenderFillRect(g_renderer, &modalRect);
         SDL_SetRenderDrawColor(g_renderer, 239, 68, 68, 255);
         SDL_RenderDrawRect(g_renderer, &modalRect);
 
-        GameRenderer::drawText(g_renderer, "OUT OF AMMUNITION!", modalRect.x + 80, modalRect.y + 40, 2, { 255, 82, 82, 255 });
-        GameRenderer::drawText(g_renderer, "Targets Still Survived!", modalRect.x + 120, modalRect.y + 85, 1, { 203, 213, 225, 255 });
+        GameRenderer::drawText(g_renderer, "OUT OF AMMUNITION!", modalRect.x + 60, modalRect.y + 35, 3, { 255, 82, 82, 255 });
+        GameRenderer::drawText(g_renderer, "Targets Still Survived!", modalRect.x + 90, modalRect.y + 85, 2, { 203, 213, 225, 255 });
 
-        SDL_Rect repBtn = { modalRect.x + 145, modalRect.y + 140, 150, 48 };
+        SDL_Rect repBtn = { modalRect.x + 135, modalRect.y + 155, 250, 58 };
         SDL_SetRenderDrawColor(g_renderer, 239, 68, 68, 255);
         SDL_RenderFillRect(g_renderer, &repBtn);
-        GameRenderer::drawText(g_renderer, "RETRY [R]", repBtn.x + 35, repBtn.y + 16, 1, { 255, 255, 255, 255 });
+        SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 200);
+        SDL_RenderDrawRect(g_renderer, &repBtn);
+        GameRenderer::drawText(g_renderer, "RETRY [SoftRight]", repBtn.x + 35, repBtn.y + 19, 2, { 255, 255, 255, 255 });
     }
 }
 
@@ -585,27 +590,33 @@ static void mainLoop() {
 
             if (event.button.button == SDL_BUTTON_LEFT) {
                 // Check Header Level Select Buttons
-                if (my >= 16 && my <= 44 && mx >= 740 && mx <= 920) {
-                    int clickedLevel = (mx - 740) / 36 + 1;
+                if (my >= 14 && my <= 52 && mx >= 720 && mx <= 930) {
+                    int clickedLevel = (mx - 720) / 42 + 1;
                     if (clickedLevel >= 1 && clickedLevel <= 5) {
                         loadLevel(clickedLevel);
                     }
                     continue;
                 }
 
-                // Check Victory Next Level Button
+                // Check Victory Buttons
                 if (g_levelWon) {
-                    SDL_Rect nextBtn = { SCREEN_WIDTH / 2 - 250 + 80, SCREEN_HEIGHT / 2 - 160 + 225, 150, 48 };
+                    SDL_Rect nextBtn = { SCREEN_WIDTH / 2 - 270 + 50, SCREEN_HEIGHT / 2 - 165 + 235, 200, 56 };
                     if (mx >= nextBtn.x && mx <= nextBtn.x + nextBtn.w && my >= nextBtn.y && my <= nextBtn.y + nextBtn.h) {
                         int nextLvl = (g_currentLevel < 5) ? g_currentLevel + 1 : 1;
                         loadLevel(nextLvl);
+                        continue;
+                    }
+
+                    SDL_Rect repBtn = { SCREEN_WIDTH / 2 - 270 + 290, SCREEN_HEIGHT / 2 - 165 + 235, 200, 56 };
+                    if (mx >= repBtn.x && mx <= repBtn.x + repBtn.w && my >= repBtn.y && my <= repBtn.y + repBtn.h) {
+                        loadLevel(g_currentLevel);
                         continue;
                     }
                 }
 
                 // Check Defeat Retry Button
                 if (g_levelLost) {
-                    SDL_Rect repBtn = { SCREEN_WIDTH / 2 - 220 + 145, SCREEN_HEIGHT / 2 - 120 + 140, 150, 48 };
+                    SDL_Rect repBtn = { SCREEN_WIDTH / 2 - 260 + 135, SCREEN_HEIGHT / 2 - 140 + 155, 250, 58 };
                     if (mx >= repBtn.x && mx <= repBtn.x + repBtn.w && my >= repBtn.y && my <= repBtn.y + repBtn.h) {
                         loadLevel(g_currentLevel);
                         continue;

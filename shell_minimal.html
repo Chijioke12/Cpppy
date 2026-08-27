@@ -51,9 +51,6 @@
       border: 0;
       outline: none;
       touch-action: none;
-      image-rendering: -webkit-optimize-contrast;
-      image-rendering: crisp-edges;
-      image-rendering: pixelated;
     }
 
     /* KaiOS Hardware SoftKey Action Bar */
@@ -66,12 +63,12 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 8px;
+      padding: 0 12px;
       z-index: 100;
     }
 
     .softkey {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -98,7 +95,7 @@
       text-align: center;
       color: #FACC15;
       font-weight: 800;
-      flex: 1.4;
+      flex: 1.2;
     }
     .softkey.right {
       text-align: right;
@@ -170,9 +167,9 @@
 
   <!-- KaiOS Physical & On-Screen SoftKey Bar -->
   <footer class="softkey-bar" id="softkey-bar">
-    <button class="softkey left" id="lsk-btn" onclick="simulateKey(112, 'F1', 't')">Slow-Mo</button>
+    <button class="softkey left" id="lsk-btn" onclick="simulateKey(112, 'SoftLeft', 't')">SoftLeft</button>
     <button class="softkey center" id="center-btn" onclick="simulateKey(13, 'Enter', ' ')">Aim / Fire</button>
-    <button class="softkey right" id="rsk-btn" onclick="simulateKey(113, 'F2', 'r')">Reset</button>
+    <button class="softkey right" id="rsk-btn" onclick="simulateKey(113, 'SoftRight', 'r')">SoftRight</button>
   </footer>
 
   <script>
@@ -198,10 +195,10 @@
     window.addEventListener('keydown', function(e) {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'SoftLeft', 'SoftRight', 'Enter', 'F1', 'F2', 'Backspace', '0', '1', '2', '3', '4', '5'].includes(e.key)) {
         if (e.key === 'SoftLeft' || e.key === 'F1') {
-          simulateKey(112, 'F1', 't');
+          simulateKey(112, 'SoftLeft', 't');
           e.preventDefault();
-        } else if (e.key === 'SoftRight' || e.key === 'F2') {
-          simulateKey(113, 'F2', 'r');
+        } else if (e.key === 'SoftRight' || e.key === 'F2' || e.key === 'Backspace') {
+          simulateKey(113, 'SoftRight', 'r');
           e.preventDefault();
         }
       }
