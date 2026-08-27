@@ -63,10 +63,18 @@ public:
     }
 
     void initB2World() {
-        b2Vec2 b2Gravity(0.0f, gravity.y / PPM); // ~22.0 m/s^2 downwards
+        b2Vec2 b2Gravity(gravity.x / PPM, gravity.y / PPM);
         b2world = std::make_unique<b2World>(b2Gravity);
         contactListener = std::make_unique<GameContactListener>(this);
         b2world->SetContactListener(contactListener.get());
+        b2world->SetAllowSleeping(true);
+    }
+
+    void setGravity(Vector2 g) {
+        gravity = g;
+        if (b2world) {
+            b2world->SetGravity(b2Vec2(g.x / PPM, g.y / PPM));
+        }
     }
 
     void clear() {
@@ -91,8 +99,13 @@ public:
         bodyDef.type = (bType == BODY_STATIC) ? b2_staticBody : (bType == BODY_KINEMATIC ? b2_kinematicBody : b2_dynamicBody);
         bodyDef.position.Set(pos.x / PPM, pos.y / PPM);
         bodyDef.userData.pointer = reinterpret_cast<uintptr_t>(body.get());
+        bodyDef.allowSleep = true;
+        bodyDef.linearDamping = 0.05f;
+        bodyDef.angularDamping = 0.15f;
+
         if (mat == MAT_PROJECTILE) {
-            bodyDef.bullet = true; // Continuous collision detection for fast projectiles!
+            bodyDef.bullet = true; // Continuous collision detection for fast projectiles
+            bodyDef.allowSleep = false;
         }
 
         b2Body* b2_b = b2world->CreateBody(&bodyDef);
@@ -103,8 +116,8 @@ public:
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &circleShape;
         fixtureDef.density = body->density;
-        fixtureDef.friction = body->friction;
-        fixtureDef.restitution = body->restitution;
+        fixtureDef.friction = (bType == BODY_STATIC) ? 0.9f : body->friction;
+        fixtureDef.restitution = (bType == BODY_STATIC) ? 0.0f : body->restitution;
 
         b2Fixture* b2_f = b2_b->CreateFixture(&fixtureDef);
 
@@ -126,6 +139,9 @@ public:
         bodyDef.position.Set(pos.x / PPM, pos.y / PPM);
         bodyDef.angle = angle;
         bodyDef.userData.pointer = reinterpret_cast<uintptr_t>(body.get());
+        bodyDef.allowSleep = true;
+        bodyDef.linearDamping = 0.05f;
+        bodyDef.angularDamping = 0.15f;
 
         b2Body* b2_b = b2world->CreateBody(&bodyDef);
 
@@ -135,8 +151,8 @@ public:
         b2FixtureDef fixtureDef;
         fixtureDef.shape = &boxShape;
         fixtureDef.density = body->density;
-        fixtureDef.friction = body->friction;
-        fixtureDef.restitution = body->restitution;
+        fixtureDef.friction = (bType == BODY_STATIC) ? 0.9f : body->friction;
+        fixtureDef.restitution = (bType == BODY_STATIC) ? 0.0f : body->restitution;
 
         b2Fixture* b2_f = b2_b->CreateFixture(&fixtureDef);
 
@@ -327,20 +343,23 @@ inline void GameContactListener::PostSolve(b2Contact* contact, const b2ContactIm
     RigidBody* rbB = reinterpret_cast<RigidBody*>(fB->GetBody()->GetUserData().pointer);
     if (!rbA || !rbB) return;
 
-    float maxImpulse = 0.0f;
-    for (int i = 0; i < impulse->count; ++i) {
-        maxImpulse = std::max(maxImpulse, impulse->normalImpulses[i]);
-    }
+    b2Body* bA = fA->GetBody();
+    b2Body* bB = fB->GetBody();
 
-    // Impact damage threshold: Ignore resting static contact (< 4.5 N*s)
-    if (maxImpulse > 4.5f) {
-        float effectiveImpulse = maxImpulse - 4.0f;
-        float dmgA = effectiveImpulse * 14.0f * (rbB->mass / (rbA->mass + rbB->mass + 0.1f));
-        float dmgB = effectiveImpulse * 14.0f * (rbA->mass / (rbA->mass + rbB->mass + 0.1f));
+    b2Vec2 vA = bA->GetLinearVelocity();
+    b2Vec2 vB = bB->GetLinearVelocity();
+    float relSpeed = (vA - vB).Length(); // relative speed in m/s
+
+    // Crucial: Only real dynamic impacts with approach velocity (> 2.8 m/s) deal damage!
+    // Resting contact under static gravity has relSpeed == 0.0 and will never take damage.
+    if (relSpeed > 2.8f) {
+        float impactFactor = (relSpeed - 2.5f);
+        float dmgA = impactFactor * 16.0f * (rbB->mass / (rbA->mass + rbB->mass + 0.1f));
+        float dmgB = impactFactor * 16.0f * (rbA->mass / (rbA->mass + rbB->mass + 0.1f));
 
         // Drill Ability Boost
-        if (rbA->isProjectile && rbA->projectileType == 3 && rbA->abilityUsed) dmgB *= 3.5f;
-        if (rbB->isProjectile && rbB->projectileType == 3 && rbB->abilityUsed) dmgA *= 3.5f;
+        if (rbA->isProjectile && rbA->projectileType == 3 && rbA->abilityUsed) dmgB *= 4.0f;
+        if (rbB->isProjectile && rbB->projectileType == 3 && rbB->abilityUsed) dmgA *= 4.0f;
 
         // Bombardier Impact Fuse
         if (rbA->isProjectile && rbA->projectileType == 1 && rbA->fuseTimer < 0.0f) rbA->fuseTimer = 1.2f;
@@ -350,9 +369,9 @@ inline void GameContactListener::PostSolve(b2Contact* contact, const b2ContactIm
         if (rbA->bodyType == BODY_DYNAMIC) rbA->takeDamage(dmgA);
         if (rbB->bodyType == BODY_DYNAMIC) rbB->takeDamage(dmgB);
 
-        // Trigger TNT on heavy impact
-        if (rbA->material == MAT_TNT && maxImpulse > 8.0f) world->triggerTNT(rbA);
-        if (rbB->material == MAT_TNT && maxImpulse > 8.0f) world->triggerTNT(rbB);
+        // Trigger TNT only on hard kinetic impacts (> 4.8 m/s) or projectile direct hits
+        if (rbA->material == MAT_TNT && (relSpeed > 4.8f || rbB->isProjectile)) world->triggerTNT(rbA);
+        if (rbB->material == MAT_TNT && (relSpeed > 4.8f || rbA->isProjectile)) world->triggerTNT(rbB);
 
         // Impact spark particles
         b2WorldManifold worldManifold;

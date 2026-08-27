@@ -101,7 +101,7 @@ public:
           position(_pos), velocity(0, 0), force(0, 0),
           angle(0.0f), angularVelocity(0.0f), torque(0.0f),
           mass(1.0f), invMass(1.0f), inertia(1.0f), invInertia(1.0f),
-          restitution(0.2f), friction(0.4f), density(1.0f),
+          restitution(0.1f), friction(0.7f), density(1.0f),
           radius(20.0f), width(40.0f), height(40.0f),
           health(100.0f), maxHealth(100.0f), isDead(false), isExploded(false),
           isTarget(false), isTargetEliminated(false), scoreValue(500), isBoss(false),
@@ -115,48 +115,48 @@ public:
         switch (material) {
             case MAT_WOOD:
                 density = 1.0f;
-                restitution = 0.15f;
-                friction = 0.55f;
+                restitution = 0.05f;
+                friction = 0.75f;
                 health = maxHealth = 90.0f;
                 color = 0x8D6E63;
                 scoreValue = 500;
                 break;
             case MAT_STONE:
                 density = 2.8f;
-                restitution = 0.08f;
-                friction = 0.75f;
+                restitution = 0.02f;
+                friction = 0.85f;
                 health = maxHealth = 260.0f;
                 color = 0x78909C;
                 scoreValue = 800;
                 break;
             case MAT_GLASS:
                 density = 0.85f;
-                restitution = 0.05f;
-                friction = 0.3f;
+                restitution = 0.02f;
+                friction = 0.5f;
                 health = maxHealth = 35.0f;
                 color = 0x80DEEA;
                 scoreValue = 600;
                 break;
             case MAT_METAL:
                 density = 4.5f;
-                restitution = 0.04f;
-                friction = 0.6f;
+                restitution = 0.02f;
+                friction = 0.75f;
                 health = maxHealth = 550.0f;
                 color = 0x455A64;
                 scoreValue = 1200;
                 break;
             case MAT_TNT:
                 density = 1.2f;
-                restitution = 0.1f;
-                friction = 0.6f;
+                restitution = 0.05f;
+                friction = 0.75f;
                 health = maxHealth = 25.0f;
                 color = 0xD32F2F;
                 scoreValue = 1500;
                 break;
             case MAT_TARGET:
                 density = 1.1f;
-                restitution = 0.12f;
-                friction = 0.5f;
+                restitution = 0.05f;
+                friction = 0.65f;
                 health = maxHealth = 40.0f;
                 color = 0x76FF03;
                 isTarget = true;
