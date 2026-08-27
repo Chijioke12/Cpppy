@@ -97,28 +97,28 @@ public:
         float cx = 750.0f;
         float baseFloor = screenHeight - 50.0f;
 
-        // Ground Level 1 Columns
+        // Ground Level 1 Columns (Height 110, Top = baseFloor - 110)
         addBlock(world, MAT_WOOD, "wood_beam_v", Vector2(cx - 70.0f, baseFloor - 55.0f), 24.0f, 110.0f);
         addBlock(world, MAT_WOOD, "wood_beam_v", Vector2(cx + 70.0f, baseFloor - 55.0f), 24.0f, 110.0f);
         addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx, baseFloor - 55.0f), 20.0f, 110.0f);
-        addEnemy(world, "grunt", Vector2(cx - 35.0f, baseFloor - 22.0f));
-        addEnemy(world, "grunt", Vector2(cx + 35.0f, baseFloor - 22.0f));
+        addEnemy(world, "grunt", Vector2(cx - 35.0f, baseFloor - 18.0f));
+        addEnemy(world, "grunt", Vector2(cx + 35.0f, baseFloor - 18.0f));
 
-        // Tier 1 Deck
-        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(cx, baseFloor - 115.0f), 180.0f, 22.0f);
+        // Tier 1 Deck (Height 22, Top = baseFloor - 132)
+        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(cx, baseFloor - 121.0f), 180.0f, 22.0f);
 
-        // Tier 2 Pillars
-        addBlock(world, MAT_WOOD, "wood_beam_v", Vector2(cx - 50.0f, baseFloor - 175.0f), 24.0f, 100.0f);
-        addBlock(world, MAT_WOOD, "wood_beam_v", Vector2(cx + 50.0f, baseFloor - 175.0f), 24.0f, 100.0f);
-        addEnemy(world, "helmet", Vector2(cx, baseFloor - 140.0f));
+        // Tier 2 Pillars (Height 100, Top = baseFloor - 232)
+        addBlock(world, MAT_WOOD, "wood_beam_v", Vector2(cx - 50.0f, baseFloor - 182.0f), 24.0f, 100.0f);
+        addBlock(world, MAT_WOOD, "wood_beam_v", Vector2(cx + 50.0f, baseFloor - 182.0f), 24.0f, 100.0f);
+        addEnemy(world, "helmet", Vector2(cx, baseFloor - 152.0f));
 
-        // Tier 2 Deck
-        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(cx, baseFloor - 230.0f), 140.0f, 22.0f);
+        // Tier 2 Deck (Height 22, Top = baseFloor - 254)
+        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(cx, baseFloor - 243.0f), 140.0f, 22.0f);
 
-        // Crown Roof Blocks
-        addBlock(world, MAT_WOOD, "wood_block", Vector2(cx - 35.0f, baseFloor - 255.0f), 40.0f, 40.0f);
-        addBlock(world, MAT_WOOD, "wood_block", Vector2(cx + 35.0f, baseFloor - 255.0f), 40.0f, 40.0f);
-        addBlock(world, MAT_STONE, "stone_block", Vector2(cx, baseFloor - 280.0f), 42.0f, 42.0f);
+        // Crown Roof Blocks (Height 40, Top = baseFloor - 294)
+        addBlock(world, MAT_WOOD, "wood_block", Vector2(cx - 35.0f, baseFloor - 274.0f), 40.0f, 40.0f);
+        addBlock(world, MAT_WOOD, "wood_block", Vector2(cx + 35.0f, baseFloor - 274.0f), 40.0f, 40.0f);
+        addBlock(world, MAT_STONE, "stone_block", Vector2(cx, baseFloor - 315.0f), 42.0f, 42.0f);
     }
 
     // LEVEL 2: TNT Munitions Vault
@@ -133,28 +133,29 @@ public:
         float cx = 760.0f;
         float baseFloor = screenHeight - 50.0f;
 
-        // Vault Pillars
+        // Vault Pillars (Height 110, Top = baseFloor - 110)
         addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx - 100.0f, baseFloor - 55.0f), 26.0f, 110.0f);
         addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx + 100.0f, baseFloor - 55.0f), 26.0f, 110.0f);
 
         // Explosive Core
-        addTNT(world, Vector2(cx - 35.0f, baseFloor - 24.0f));
-        addTNT(world, Vector2(cx + 35.0f, baseFloor - 24.0f));
-        addEnemy(world, "grunt", Vector2(cx, baseFloor - 24.0f));
+        addTNT(world, Vector2(cx - 35.0f, baseFloor - 22.0f));
+        addTNT(world, Vector2(cx + 35.0f, baseFloor - 22.0f));
+        addEnemy(world, "grunt", Vector2(cx, baseFloor - 18.0f));
 
-        // Stone Slab Roof
-        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(cx, baseFloor - 118.0f), 230.0f, 26.0f);
+        // Stone Slab Roof (Height 26, Top = baseFloor - 136)
+        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(cx, baseFloor - 123.0f), 230.0f, 26.0f);
 
-        // Upper Tower
-        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx - 60.0f, baseFloor - 175.0f), 22.0f, 100.0f);
-        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx + 60.0f, baseFloor - 175.0f), 22.0f, 100.0f);
-        addTNT(world, Vector2(cx, baseFloor - 145.0f));
-        addEnemy(world, "helmet", Vector2(cx, baseFloor - 195.0f));
+        // Upper Tower (Height 100, Top = baseFloor - 236)
+        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx - 60.0f, baseFloor - 186.0f), 22.0f, 100.0f);
+        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx + 60.0f, baseFloor - 186.0f), 22.0f, 100.0f);
+        addTNT(world, Vector2(cx, baseFloor - 158.0f));
+        addEnemy(world, "helmet", Vector2(cx, baseFloor - 156.0f));
 
-        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(cx, baseFloor - 232.0f), 160.0f, 22.0f);
-        addBlock(world, MAT_STONE, "stone_block", Vector2(cx - 45.0f, baseFloor - 260.0f), 44.0f, 44.0f);
-        addBlock(world, MAT_STONE, "stone_block", Vector2(cx + 45.0f, baseFloor - 260.0f), 44.0f, 44.0f);
-        addEnemy(world, "king", Vector2(cx, baseFloor - 260.0f), 24.0f);
+        // Upper Deck (Height 22, Top = baseFloor - 258)
+        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(cx, baseFloor - 247.0f), 160.0f, 22.0f);
+        addBlock(world, MAT_STONE, "stone_block", Vector2(cx - 45.0f, baseFloor - 280.0f), 44.0f, 44.0f);
+        addBlock(world, MAT_STONE, "stone_block", Vector2(cx + 45.0f, baseFloor - 280.0f), 44.0f, 44.0f);
+        addEnemy(world, "king", Vector2(cx, baseFloor - 282.0f), 24.0f);
     }
 
     // LEVEL 3: Iron Bastion Keep
@@ -171,32 +172,32 @@ public:
 
         // Front Guard Bunker
         addBlock(world, MAT_STONE, "stone_block", Vector2(cx - 160.0f, baseFloor - 22.0f), 44.0f, 44.0f);
-        addEnemy(world, "helmet", Vector2(cx - 160.0f, baseFloor - 66.0f));
+        addEnemy(world, "helmet", Vector2(cx - 160.0f, baseFloor - 64.0f));
 
-        // Steel Main Frame
+        // Steel Main Frame Base (Height 32, Top = baseFloor - 32)
         addBlock(world, MAT_METAL, "metal_girder", Vector2(cx, baseFloor - 16.0f), 140.0f, 32.0f);
-        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx - 70.0f, baseFloor - 80.0f), 26.0f, 110.0f);
-        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx + 70.0f, baseFloor - 80.0f), 26.0f, 110.0f);
+        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx - 70.0f, baseFloor - 87.0f), 26.0f, 110.0f);
+        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx + 70.0f, baseFloor - 87.0f), 26.0f, 110.0f);
 
-        addEnemy(world, "grunt", Vector2(cx - 20.0f, baseFloor - 55.0f));
-        addTNT(world, Vector2(cx + 25.0f, baseFloor - 55.0f));
+        addEnemy(world, "grunt", Vector2(cx - 20.0f, baseFloor - 50.0f));
+        addTNT(world, Vector2(cx + 25.0f, baseFloor - 54.0f));
 
-        // Mid Heavy Steel Beam
-        addBlock(world, MAT_METAL, "metal_girder", Vector2(cx, baseFloor - 145.0f), 190.0f, 32.0f);
+        // Mid Heavy Steel Beam (Height 32, Top = baseFloor - 174)
+        addBlock(world, MAT_METAL, "metal_girder", Vector2(cx, baseFloor - 158.0f), 190.0f, 32.0f);
 
         // Hanging Cage Constraint with Enemy
         auto cage = addBlock(world, MAT_WOOD, "wood_block", Vector2(cx + 140.0f, baseFloor - 80.0f), 42.0f, 42.0f);
-        auto anchorBeam = addBlock(world, MAT_METAL, "metal_girder", Vector2(cx + 140.0f, baseFloor - 145.0f), 80.0f, 26.0f);
-        world.createConstraint(CONSTRAINT_ROD, anchorBeam, cage, Vector2(0, 13.0f), Vector2(0, -21.0f), 60.0f);
-        addEnemy(world, "helmet", Vector2(cx + 140.0f, baseFloor - 110.0f));
+        auto anchorBeam = addBlock(world, MAT_METAL, "metal_girder", Vector2(cx + 140.0f, baseFloor - 158.0f), 80.0f, 26.0f);
+        world.createConstraint(CONSTRAINT_ROD, anchorBeam, cage, Vector2(0, 13.0f), Vector2(0, -21.0f), 55.0f);
+        addEnemy(world, "helmet", Vector2(cx + 140.0f, baseFloor - 101.0f));
 
-        // High Castle Keep
-        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx - 45.0f, baseFloor - 210.0f), 24.0f, 100.0f);
-        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx + 45.0f, baseFloor - 210.0f), 24.0f, 100.0f);
-        addEnemy(world, "king", Vector2(cx, baseFloor - 180.0f), 25.0f);
+        // High Castle Keep (Height 100, Top = baseFloor - 274)
+        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx - 45.0f, baseFloor - 224.0f), 24.0f, 100.0f);
+        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx + 45.0f, baseFloor - 224.0f), 24.0f, 100.0f);
+        addEnemy(world, "king", Vector2(cx, baseFloor - 198.0f), 24.0f);
 
-        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(cx, baseFloor - 268.0f), 130.0f, 24.0f);
-        addBlock(world, MAT_STONE, "stone_block", Vector2(cx, baseFloor - 295.0f), 44.0f, 44.0f);
+        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(cx, baseFloor - 286.0f), 130.0f, 24.0f);
+        addBlock(world, MAT_STONE, "stone_block", Vector2(cx, baseFloor - 320.0f), 44.0f, 44.0f);
     }
 
     // LEVEL 4: Trebuchet Highlands
@@ -214,31 +215,31 @@ public:
         float ax = 600.0f;
         addBlock(world, MAT_STONE, "stone_beam_v", Vector2(ax - 40.0f, baseFloor - 60.0f), 26.0f, 120.0f);
         addBlock(world, MAT_STONE, "stone_beam_v", Vector2(ax + 40.0f, baseFloor - 60.0f), 26.0f, 120.0f);
-        addEnemy(world, "grunt", Vector2(ax, baseFloor - 24.0f));
-        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(ax, baseFloor - 130.0f), 120.0f, 22.0f);
-        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(ax, baseFloor - 185.0f), 22.0f, 90.0f);
-        addEnemy(world, "helmet", Vector2(ax, baseFloor - 240.0f));
+        addEnemy(world, "grunt", Vector2(ax, baseFloor - 18.0f));
+        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(ax, baseFloor - 131.0f), 120.0f, 22.0f);
+        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(ax, baseFloor - 187.0f), 22.0f, 90.0f);
+        addEnemy(world, "helmet", Vector2(ax, baseFloor - 162.0f));
 
         // Tower B (Right Fortress)
         float bx = 850.0f;
         addBlock(world, MAT_STONE, "stone_beam_v", Vector2(bx - 45.0f, baseFloor - 70.0f), 26.0f, 140.0f);
         addBlock(world, MAT_STONE, "stone_beam_v", Vector2(bx + 45.0f, baseFloor - 70.0f), 26.0f, 140.0f);
-        addTNT(world, Vector2(bx, baseFloor - 24.0f));
-        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(bx, baseFloor - 150.0f), 130.0f, 24.0f);
-        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(bx - 35.0f, baseFloor - 215.0f), 24.0f, 110.0f);
-        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(bx + 35.0f, baseFloor - 215.0f), 24.0f, 110.0f);
-        addEnemy(world, "king", Vector2(bx, baseFloor - 185.0f), 25.0f);
-        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(bx, baseFloor - 275.0f), 110.0f, 22.0f);
+        addTNT(world, Vector2(bx, baseFloor - 22.0f));
+        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(bx, baseFloor - 152.0f), 130.0f, 24.0f);
+        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(bx - 35.0f, baseFloor - 219.0f), 24.0f, 110.0f);
+        addBlock(world, MAT_STONE, "stone_beam_v", Vector2(bx + 35.0f, baseFloor - 219.0f), 24.0f, 110.0f);
+        addEnemy(world, "king", Vector2(bx, baseFloor - 188.0f), 24.0f);
+        addBlock(world, MAT_WOOD, "wood_beam_h", Vector2(bx, baseFloor - 285.0f), 110.0f, 22.0f);
 
         // Suspension Bridge linking both towers
-        auto bridge = addBlock(world, MAT_WOOD, "wood_beam_h", Vector2((ax + bx) * 0.5f, baseFloor - 140.0f), 140.0f, 18.0f);
-        addEnemy(world, "grunt", Vector2((ax + bx) * 0.5f, baseFloor - 160.0f));
+        auto bridge = addBlock(world, MAT_WOOD, "wood_beam_h", Vector2((ax + bx) * 0.5f, baseFloor - 141.0f), 140.0f, 18.0f);
+        addEnemy(world, "grunt", Vector2((ax + bx) * 0.5f, baseFloor - 159.0f));
 
         // Swinging Pendulum Boulder
         auto ceiling = world.createBox(BODY_STATIC, MAT_STONE, Vector2((ax + bx) * 0.5f, 140.0f), 40.0f, 20.0f);
-        auto pendulum = world.createCircle(BODY_DYNAMIC, MAT_STONE, Vector2((ax + bx) * 0.5f, 260.0f), 26.0f);
+        auto pendulum = world.createCircle(BODY_DYNAMIC, MAT_STONE, Vector2((ax + bx) * 0.5f, 250.0f), 24.0f);
         pendulum->textureKey = "stone_block";
-        world.createConstraint(CONSTRAINT_ROD, ceiling, pendulum, Vector2(0, 10.0f), Vector2(0, 0), 120.0f);
+        world.createConstraint(CONSTRAINT_ROD, ceiling, pendulum, Vector2(0, 10.0f), Vector2(0, 0), 100.0f);
     }
 
     // LEVEL 5: Royal King's Citadel
@@ -259,31 +260,31 @@ public:
         addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx + 50.0f, baseFloor - 55.0f), 28.0f, 110.0f);
         addBlock(world, MAT_STONE, "stone_beam_v", Vector2(cx + 140.0f, baseFloor - 55.0f), 28.0f, 110.0f);
 
-        addTNT(world, Vector2(cx - 95.0f, baseFloor - 24.0f));
-        addEnemy(world, "grunt", Vector2(cx, baseFloor - 24.0f));
-        addTNT(world, Vector2(cx + 95.0f, baseFloor - 24.0f));
+        addTNT(world, Vector2(cx - 95.0f, baseFloor - 22.0f));
+        addEnemy(world, "grunt", Vector2(cx, baseFloor - 18.0f));
+        addTNT(world, Vector2(cx + 95.0f, baseFloor - 22.0f));
 
-        // Castle Ground Deck (Heavy Stone)
-        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(cx, baseFloor - 118.0f), 320.0f, 26.0f);
+        // Castle Ground Deck (Heavy Stone, Height 26, Top = baseFloor - 136)
+        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(cx, baseFloor - 123.0f), 320.0f, 26.0f);
 
-        // Floor 2: Steel Truss & Guards
-        addBlock(world, MAT_METAL, "metal_girder", Vector2(cx - 90.0f, baseFloor - 165.0f), 90.0f, 30.0f);
-        addBlock(world, MAT_METAL, "metal_girder", Vector2(cx + 90.0f, baseFloor - 165.0f), 90.0f, 30.0f);
-        addEnemy(world, "helmet", Vector2(cx - 90.0f, baseFloor - 195.0f));
-        addEnemy(world, "helmet", Vector2(cx + 90.0f, baseFloor - 195.0f));
+        // Floor 2: Steel Truss & Guards (Height 30, Top = baseFloor - 166)
+        addBlock(world, MAT_METAL, "metal_girder", Vector2(cx - 90.0f, baseFloor - 151.0f), 90.0f, 30.0f);
+        addBlock(world, MAT_METAL, "metal_girder", Vector2(cx + 90.0f, baseFloor - 151.0f), 90.0f, 30.0f);
+        addEnemy(world, "helmet", Vector2(cx - 90.0f, baseFloor - 186.0f));
+        addEnemy(world, "helmet", Vector2(cx + 90.0f, baseFloor - 186.0f));
 
-        // Floor 3: Glass Sanctum & Royal Balcony
-        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx - 45.0f, baseFloor - 240.0f), 22.0f, 110.0f);
-        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx + 45.0f, baseFloor - 240.0f), 22.0f, 110.0f);
-        addTNT(world, Vector2(cx, baseFloor - 200.0f));
+        // Floor 3: Glass Sanctum & Royal Balcony (Height 110, Top = baseFloor - 276)
+        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx - 45.0f, baseFloor - 221.0f), 22.0f, 110.0f);
+        addBlock(world, MAT_GLASS, "glass_beam_v", Vector2(cx + 45.0f, baseFloor - 221.0f), 22.0f, 110.0f);
+        addTNT(world, Vector2(cx, baseFloor - 188.0f));
 
-        // High Throne Turret
-        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(cx, baseFloor - 302.0f), 160.0f, 24.0f);
-        addBlock(world, MAT_STONE, "stone_block", Vector2(cx - 45.0f, baseFloor - 335.0f), 42.0f, 42.0f);
-        addBlock(world, MAT_STONE, "stone_block", Vector2(cx + 45.0f, baseFloor - 335.0f), 42.0f, 42.0f);
+        // High Throne Turret (Height 24, Top = baseFloor - 300)
+        addBlock(world, MAT_STONE, "stone_beam_h", Vector2(cx, baseFloor - 288.0f), 160.0f, 24.0f);
+        addBlock(world, MAT_STONE, "stone_block", Vector2(cx - 45.0f, baseFloor - 321.0f), 42.0f, 42.0f);
+        addBlock(world, MAT_STONE, "stone_block", Vector2(cx + 45.0f, baseFloor - 321.0f), 42.0f, 42.0f);
 
         // THE GRAND KING PIG
-        addEnemy(world, "king", Vector2(cx, baseFloor - 340.0f), 28.0f);
+        addEnemy(world, "king", Vector2(cx, baseFloor - 328.0f), 28.0f);
     }
 };
 

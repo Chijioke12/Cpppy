@@ -680,7 +680,7 @@ int main(int argc, char* argv[]) {
         SDL_WINDOWPOS_CENTERED,
         SCREEN_WIDTH,
         SCREEN_HEIGHT,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
+        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
     );
 
     if (!g_window) {
@@ -693,6 +693,9 @@ int main(int argc, char* argv[]) {
     if (!g_renderer) {
         g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE);
     }
+
+    // Crucial for high-DPI, mobile responsive scaling, and proper touch event coordinate mapping
+    SDL_RenderSetLogicalSize(g_renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     // Initialize SVG -> PNG Texture Manager
     if (!TextureManager::getInstance().init(g_renderer)) {

@@ -124,17 +124,62 @@ public:
         float scaledDt = dt * timeScale;
         if (scaledDt <= 0.0f) return;
 
+        // Substepping for rock-solid stability
+        const int subSteps = 4;
+        float subDt = scaledDt / (float)subSteps;
+
+        for (int stepIdx = 0; stepIdx < subSteps; ++stepIdx) {
+            stepSubStep(subDt, stepIdx == 0);
+        }
+
+        // Handle Destroyed Bodies & Targets
+        for (auto& b : bodies) {
+            if (b->isDead && !b->isExploded) {
+                b->isExploded = true;
+                if (b->isTarget && !b->isTargetEliminated) {
+                    b->isTargetEliminated = true;
+                    targetsRemaining--;
+                    totalScore += b->scoreValue;
+                    particleSystem.emitExplosion(b->position, 25);
+                    particleSystem.emitDebris(b->position, 0xAEEA00, 15);
+                    addScorePopup(b->position, "+5000", 0x76FF03, 2.4f);
+                } else if (b->material == MAT_TNT) {
+                    triggerTNT(b.get());
+                } else if (b->material != MAT_PROJECTILE) {
+                    totalScore += b->scoreValue;
+                    particleSystem.emitDebris(b->position, b->color, 12);
+                    addScorePopup(b->position, "+" + std::to_string(b->scoreValue), 0xFFD54F, 1.4f);
+                }
+            }
+        }
+
+        // Update Particle System & Popups
+        particleSystem.update(scaledDt, gravity);
+
+        for (size_t i = 0; i < scorePopups.size();) {
+            scorePopups[i].life -= scaledDt;
+            scorePopups[i].position.y -= 45.0f * scaledDt; // Drift upwards
+            if (scorePopups[i].life <= 0.0f) {
+                scorePopups.erase(scorePopups.begin() + i);
+            } else {
+                ++i;
+            }
+        }
+    }
+
+private:
+    void stepSubStep(float subDt, bool isFirstSubStep) {
         // 1. Update Projectile Fuse Timers & Flight Times
         for (auto& b : bodies) {
             if (b->isDead) continue;
-            if (b->damageFlash > 0.0f) b->damageFlash -= scaledDt;
+            if (isFirstSubStep && b->damageFlash > 0.0f) b->damageFlash -= subDt * 4.0f;
 
             if (b->isProjectile) {
-                b->flightTime += scaledDt;
+                b->flightTime += subDt;
 
                 // Bomb fuse timer
                 if (b->fuseTimer > 0.0f) {
-                    b->fuseTimer -= scaledDt;
+                    b->fuseTimer -= subDt;
                     particleSystem.emit(b->position + Vector2(0, -15), Vector2(0, -30), 0.3f, 3.0f, 0xFF9800, 0);
                     if (b->fuseTimer <= 0.0f) {
                         applyExplosion(b->position, 240.0f, 3600.0f, 350.0f);
@@ -156,13 +201,19 @@ public:
 
             // Kinematic & Dynamic integration
             if (b->bodyType == BODY_DYNAMIC) {
-                b->velocity += (gravity + b->force * b->invMass) * scaledDt;
-                b->velocity *= (1.0f - airResistance);
-                b->angularVelocity += (b->torque * b->invInertia) * scaledDt;
-                b->angularVelocity *= (1.0f - airResistance * 2.0f);
+                b->velocity += (gravity + b->force * b->invMass) * subDt;
+                b->velocity *= (1.0f - airResistance * 0.5f);
+                b->angularVelocity += (b->torque * b->invInertia) * subDt;
+                b->angularVelocity *= (1.0f - airResistance * 1.5f);
 
-                b->position += b->velocity * scaledDt;
-                b->angle += b->angularVelocity * scaledDt;
+                // Gentle sleep damping for resting stacks
+                if (b->velocity.lengthSq() < 0.25f && std::abs(b->angularVelocity) < 0.05f) {
+                    b->velocity = Vector2(0, 0);
+                    b->angularVelocity = 0.0f;
+                }
+
+                b->position += b->velocity * subDt;
+                b->angle += b->angularVelocity * subDt;
                 b->updateWorldVertices();
 
                 b->force = Vector2(0, 0);
@@ -199,6 +250,7 @@ public:
             for (auto& m : manifolds) {
                 RigidBody* a = m.bodyA;
                 RigidBody* b = m.bodyB;
+                float numContacts = std::max(1.0f, (float)m.contacts.size());
 
                 for (auto& c : m.contacts) {
                     Vector2 rA = c.point - a->position;
@@ -217,7 +269,11 @@ public:
 
                     if (invMassSum <= 0.00001f) continue;
 
-                    float impulseMag = -(1.0f + m.restitution) * contactVel / invMassSum;
+                    // Restitution cutoff: Disable restitution at low velocities (< 60 px/s) to prevent resting vibration & structure collapse!
+                    float effectiveRestitution = (std::abs(contactVel) > 60.0f) ? m.restitution : 0.0f;
+                    float impulseMag = -(1.0f + effectiveRestitution) * contactVel / invMassSum;
+                    impulseMag /= numContacts;
+
                     Vector2 impulse = m.normal * impulseMag;
 
                     a->applyImpulse(-impulse, rA);
@@ -228,7 +284,12 @@ public:
                     float tanLen = tangent.length();
                     if (tanLen > 0.001f) {
                         tangent = tangent / tanLen;
-                        float jt = -relativeVel.dot(tangent) / invMassSum;
+                        float rACrossT = rA.cross(tangent);
+                        float rBCrossT = rB.cross(tangent);
+                        float invMassSumT = a->invMass + b->invMass + (rACrossT * rACrossT) * a->invInertia + (rBCrossT * rBCrossT) * b->invInertia;
+                        float jt = -relativeVel.dot(tangent) / (invMassSumT + 0.0001f);
+                        jt /= numContacts;
+
                         float maxFriction = impulseMag * m.dynamicFriction;
                         jt = std::max(-maxFriction, std::min(maxFriction, jt));
                         Vector2 frictionImpulse = tangent * jt;
@@ -237,14 +298,13 @@ public:
                         b->applyImpulse(frictionImpulse, rB);
                     }
 
-                    // Calculate Collision Damage from relative velocity impact
+                    // Calculate Collision Damage from relative velocity impact (only on true impacts, not resting contact)
                     float impactSpeed = std::abs(contactVel);
-                    if (impactSpeed > 75.0f && iter == 0) {
-                        float dmgA = impactSpeed * 0.45f * (b->mass / (a->mass + b->mass + 0.1f));
-                        float dmgB = impactSpeed * 0.45f * (a->mass / (a->mass + b->mass + 0.1f));
+                    if (impactSpeed > 220.0f && iter == 0) {
+                        float dmgA = (impactSpeed - 180.0f) * 0.4f * (b->mass / (a->mass + b->mass + 0.1f));
+                        float dmgB = (impactSpeed - 180.0f) * 0.4f * (a->mass / (a->mass + b->mass + 0.1f));
 
                         if (a->isProjectile && a->projectileType == 3 && a->abilityUsed) {
-                            // Drill drill drill damage boost!
                             dmgB *= 3.5f;
                         }
                         if (b->isProjectile && b->projectileType == 3 && b->abilityUsed) {
@@ -273,60 +333,27 @@ public:
                         }
 
                         // TNT Impact Detonation
-                        if (a->material == MAT_TNT && impactSpeed > 100.0f) triggerTNT(a);
-                        if (b->material == MAT_TNT && impactSpeed > 100.0f) triggerTNT(b);
+                        if (a->material == MAT_TNT && impactSpeed > 280.0f) triggerTNT(a);
+                        if (b->material == MAT_TNT && impactSpeed > 280.0f) triggerTNT(b);
                     }
                 }
             }
         }
 
         // Positional Penetration Correction (Baumgarte stabilization)
-        const float percent = 0.45f;
-        const float slop = 0.02f;
+        const float percent = 0.25f;
+        const float slop = 0.1f;
         for (auto& m : manifolds) {
             RigidBody* a = m.bodyA;
             RigidBody* b = m.bodyB;
+            float numContacts = std::max(1.0f, (float)m.contacts.size());
             for (auto& c : m.contacts) {
-                float correctionMag = std::max(c.penetration - slop, 0.0f) / (a->invMass + b->invMass + 0.0001f) * percent;
+                float correctionMag = std::max(c.penetration - slop, 0.0f) / (a->invMass + b->invMass + 0.0001f) * (percent / numContacts);
                 Vector2 correction = m.normal * correctionMag;
                 if (a->bodyType == BODY_DYNAMIC) a->position -= correction * a->invMass;
                 if (b->bodyType == BODY_DYNAMIC) b->position += correction * b->invMass;
                 a->updateWorldVertices();
                 b->updateWorldVertices();
-            }
-        }
-
-        // 4. Handle Destroyed Bodies & Targets
-        for (auto& b : bodies) {
-            if (b->isDead && !b->isExploded) {
-                b->isExploded = true;
-                if (b->isTarget && !b->isTargetEliminated) {
-                    b->isTargetEliminated = true;
-                    targetsRemaining--;
-                    totalScore += b->scoreValue;
-                    particleSystem.emitExplosion(b->position, 25);
-                    particleSystem.emitDebris(b->position, 0xAEEA00, 15);
-                    addScorePopup(b->position, "+5000", 0x76FF03, 2.4f);
-                } else if (b->material == MAT_TNT) {
-                    triggerTNT(b.get());
-                } else if (b->material != MAT_PROJECTILE) {
-                    totalScore += b->scoreValue;
-                    particleSystem.emitDebris(b->position, b->color, 12);
-                    addScorePopup(b->position, "+" + std::to_string(b->scoreValue), 0xFFD54F, 1.4f);
-                }
-            }
-        }
-
-        // 5. Update Particle System & Popups
-        particleSystem.update(scaledDt, gravity);
-
-        for (size_t i = 0; i < scorePopups.size();) {
-            scorePopups[i].life -= scaledDt;
-            scorePopups[i].position.y -= 45.0f * scaledDt; // Drift upwards
-            if (scorePopups[i].life <= 0.0f) {
-                scorePopups.erase(scorePopups.begin() + i);
-            } else {
-                ++i;
             }
         }
     }
