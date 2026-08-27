@@ -1,0 +1,16 @@
+{
+  "name": "cpp-physics-engine",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port=3000 --host=0.0.0.0",
+    "build": "./build.sh",
+    "preview": "vite preview",
+    "build:native": "make native",
+    "clean": "make clean"
+  },
+  "devDependencies": {
+    "vite": "^6.2.3"
+  }
+}

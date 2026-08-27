@@ -1,0 +1,6 @@
+{
+  "name": "C++ Physics Engine Game (Emscripten)",
+  "description": "A high-performance 2D rigid body, ragdoll, constraint, and particle physics game written in modern C++ and compiled to WebAssembly via Emscripten.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
