@@ -652,13 +652,18 @@ static void mainLoop() {
             SDL_Keycode key = event.key.keysym.sym;
             if (key >= SDLK_1 && key <= SDLK_5) {
                 loadLevel(key - SDLK_1 + 1);
-            } else if (key == SDLK_r || key == SDLK_BACKSPACE) {
+            } else if (key == SDLK_r || key == SDLK_BACKSPACE || key == SDLK_F2) {
                 loadLevel(g_currentLevel);
-            } else if (key == SDLK_n || key == SDLK_F2) {
+            } else if (key == SDLK_n) {
                 int nextLvl = (g_currentLevel < 5) ? g_currentLevel + 1 : 1;
                 loadLevel(nextLvl);
             } else if (key == SDLK_t || key == SDLK_F1) {
-                g_world.timeScale = (g_world.timeScale < 1.0f) ? 1.0f : 0.25f;
+                if (g_levelWon) {
+                    int nextLvl = (g_currentLevel < 5) ? g_currentLevel + 1 : 1;
+                    loadLevel(nextLvl);
+                } else {
+                    g_world.timeScale = (g_world.timeScale < 1.0f) ? 1.0f : 0.25f;
+                }
             } else if (key == SDLK_SPACE || key == SDLK_RETURN || key == SDLK_KP_ENTER) {
                 if (g_activeFlightBird && !g_activeFlightBird->isDead && !g_activeFlightBird->abilityUsed) {
                     triggerBirdAbility();

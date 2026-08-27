@@ -167,9 +167,9 @@
 
   <!-- KaiOS Physical & On-Screen SoftKey Bar -->
   <footer class="softkey-bar" id="softkey-bar">
-    <button class="softkey left" id="lsk-btn" onclick="simulateKey(112, 'SoftLeft', 't')">SoftLeft</button>
-    <button class="softkey center" id="center-btn" onclick="simulateKey(13, 'Enter', ' ')">Aim / Fire</button>
-    <button class="softkey right" id="rsk-btn" onclick="simulateKey(113, 'SoftRight', 'r')">SoftRight</button>
+    <button class="softkey left" id="lsk-btn" onclick="simulateKey(84, 't', 'KeyT')">SoftLeft</button>
+    <button class="softkey center" id="center-btn" onclick="simulateKey(13, 'Enter', 'Enter')">Aim / Fire</button>
+    <button class="softkey right" id="rsk-btn" onclick="simulateKey(82, 'r', 'KeyR')">SoftRight</button>
   </footer>
 
   <script>
@@ -178,31 +178,57 @@
     var loadingOverlay = document.getElementById('loading-overlay');
     var canvasElement = document.getElementById('canvas');
 
-    function simulateKey(keyCode, keyName, charVal) {
-      if (!canvasElement) return;
-      var eventDown = new KeyboardEvent('keydown', {
-        key: keyName,
-        code: keyName,
-        keyCode: keyCode,
-        which: keyCode,
-        bubbles: true
-      });
-      canvasElement.dispatchEvent(eventDown);
-      window.dispatchEvent(eventDown);
+    function simulateKey(keyCode, keyName, codeName) {
+      var target = canvasElement || window;
+      try {
+        var eventDown = new KeyboardEvent('keydown', {
+          key: keyName,
+          code: codeName || keyName,
+          keyCode: keyCode,
+          which: keyCode,
+          charCode: keyCode,
+          bubbles: true,
+          cancelable: true
+        });
+        eventDown._simulated = true;
+        target.dispatchEvent(eventDown);
+
+        setTimeout(function() {
+          var eventUp = new KeyboardEvent('keyup', {
+            key: keyName,
+            code: codeName || keyName,
+            keyCode: keyCode,
+            which: keyCode,
+            charCode: keyCode,
+            bubbles: true,
+            cancelable: true
+          });
+          eventUp._simulated = true;
+          target.dispatchEvent(eventUp);
+        }, 50);
+      } catch (err) {
+        console.warn('simulateKey error:', err);
+      }
     }
 
     // KaiOS Keypad Listener mapping for physical hardware
     window.addEventListener('keydown', function(e) {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'SoftLeft', 'SoftRight', 'Enter', 'F1', 'F2', 'Backspace', '0', '1', '2', '3', '4', '5'].includes(e.key)) {
-        if (e.key === 'SoftLeft' || e.key === 'F1') {
-          simulateKey(112, 'SoftLeft', 't');
-          e.preventDefault();
-        } else if (e.key === 'SoftRight' || e.key === 'F2' || e.key === 'Backspace') {
-          simulateKey(113, 'SoftRight', 'r');
-          e.preventDefault();
-        }
+      if (e._simulated) return; // Prevent any event recursion!
+
+      if (e.key === 'SoftLeft' || e.key === 'F1' || e.keyCode === 112 || e.keyCode === 166) {
+        e.preventDefault();
+        e.stopPropagation();
+        simulateKey(84, 't', 'KeyT');
+      } else if (e.key === 'SoftRight' || e.key === 'F2' || e.keyCode === 113 || e.keyCode === 167) {
+        e.preventDefault();
+        e.stopPropagation();
+        simulateKey(82, 'r', 'KeyR');
+      } else if (e.key === 'Backspace' || e.keyCode === 8) {
+        e.preventDefault();
+        e.stopPropagation();
+        simulateKey(82, 'r', 'KeyR');
       }
-    });
+    }, true);
 
     var Module = {
       preRun: [],
