@@ -5,7 +5,7 @@ set -e
 # KaiOS 2.5 (asm.js) & Modern Web (WebAssembly) Dual Build Script
 # ==============================================================================
 
-MODE="${1:-wasm}"
+MODE="${1:-kaios}"
 echo "=== Building Physics Engine in mode: $MODE ==="
 
 mkdir -p dist

@@ -55,7 +55,7 @@ jobs:
       - name: Build C++ Game with Emscripten
         run: |
           chmod +x ./build.sh
-          ./build.sh
+          ./build.sh kaios
 
       - name: Upload Pages Artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
