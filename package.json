@@ -6,16 +6,14 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "bash ./build.sh",
-    "build:kaios": "bash ./build.sh kaios",
     "lint": "vite build --mode development || true",
-    "preview": "vite preview",
-    "build:native": "make native",
-    "clean": "make clean"
+    "preview": "vite preview"
   },
   "devDependencies": {
     "vite": "^6.2.3"
   },
   "dependencies": {
-    "@resvg/resvg-js": "^2.6.2"
+    "@resvg/resvg-js": "^2.6.2",
+    "jszip": "^3.10.1"
   }
 }
