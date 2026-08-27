@@ -3,8 +3,8 @@
 
 #include "RigidBody.h"
 #include "Constraint.h"
-#include "Collision.h"
 #include "ParticleSystem.h"
+#include <box2d/box2d.h>
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -20,17 +20,31 @@ struct ScorePopup {
     float scale;
 };
 
+class PhysicsWorld;
+
+class GameContactListener : public b2ContactListener {
+public:
+    PhysicsWorld* world;
+
+    GameContactListener(PhysicsWorld* w) : world(w) {}
+
+    void BeginContact(b2Contact* contact) override;
+    void PostSolve(b2Contact* contact, const b2ContactImpulse* impulse) override;
+};
+
 class PhysicsWorld {
 public:
+    static constexpr float PPM = 30.0f; // 30 pixels per 1 Box2D meter
+
+    std::unique_ptr<b2World> b2world;
+    std::unique_ptr<GameContactListener> contactListener;
+
     std::vector<std::shared_ptr<RigidBody>> bodies;
     std::vector<std::shared_ptr<Constraint>> constraints;
     std::vector<ScorePopup> scorePopups;
     ParticleSystem particleSystem;
 
     Vector2 gravity;
-    float airResistance;
-    int velocityIterations;
-    int positionIterations;
     float timeScale;
 
     int nextBodyId;
@@ -41,11 +55,19 @@ public:
     int totalTargets;
 
     PhysicsWorld()
-        : gravity(0.0f, 980.0f), airResistance(0.001f),
-          velocityIterations(8), positionIterations(4), timeScale(1.0f),
+        : gravity(0.0f, 660.0f), timeScale(1.0f),
           nextBodyId(1), nextConstraintId(1),
           totalScore(0), targetsRemaining(0), totalTargets(0)
-    {}
+    {
+        initB2World();
+    }
+
+    void initB2World() {
+        b2Vec2 b2Gravity(0.0f, gravity.y / PPM); // ~22.0 m/s^2 downwards
+        b2world = std::make_unique<b2World>(b2Gravity);
+        contactListener = std::make_unique<GameContactListener>(this);
+        b2world->SetContactListener(contactListener.get());
+    }
 
     void clear() {
         bodies.clear();
@@ -56,11 +78,40 @@ public:
         nextConstraintId = 1;
         targetsRemaining = 0;
         totalTargets = 0;
+
+        // Recreate clean Box2D world
+        initB2World();
     }
 
     std::shared_ptr<RigidBody> createCircle(BodyType bType, MaterialType mat, Vector2 pos, float radius) {
         auto body = std::make_shared<RigidBody>(nextBodyId++, bType, SHAPE_CIRCLE, mat, pos);
         body->setCircle(radius);
+
+        b2BodyDef bodyDef;
+        bodyDef.type = (bType == BODY_STATIC) ? b2_staticBody : (bType == BODY_KINEMATIC ? b2_kinematicBody : b2_dynamicBody);
+        bodyDef.position.Set(pos.x / PPM, pos.y / PPM);
+        bodyDef.userData.pointer = reinterpret_cast<uintptr_t>(body.get());
+        if (mat == MAT_PROJECTILE) {
+            bodyDef.bullet = true; // Continuous collision detection for fast projectiles!
+        }
+
+        b2Body* b2_b = b2world->CreateBody(&bodyDef);
+
+        b2CircleShape circleShape;
+        circleShape.m_radius = radius / PPM;
+
+        b2FixtureDef fixtureDef;
+        fixtureDef.shape = &circleShape;
+        fixtureDef.density = body->density;
+        fixtureDef.friction = body->friction;
+        fixtureDef.restitution = body->restitution;
+
+        b2Fixture* b2_f = b2_b->CreateFixture(&fixtureDef);
+
+        body->b2_body = b2_b;
+        body->b2_fixture = b2_f;
+        body->syncFromB2(PPM);
+
         bodies.push_back(body);
         return body;
     }
@@ -69,6 +120,30 @@ public:
         auto body = std::make_shared<RigidBody>(nextBodyId++, bType, SHAPE_BOX, mat, pos);
         body->angle = angle;
         body->setBox(width, height);
+
+        b2BodyDef bodyDef;
+        bodyDef.type = (bType == BODY_STATIC) ? b2_staticBody : (bType == BODY_KINEMATIC ? b2_kinematicBody : b2_dynamicBody);
+        bodyDef.position.Set(pos.x / PPM, pos.y / PPM);
+        bodyDef.angle = angle;
+        bodyDef.userData.pointer = reinterpret_cast<uintptr_t>(body.get());
+
+        b2Body* b2_b = b2world->CreateBody(&bodyDef);
+
+        b2PolygonShape boxShape;
+        boxShape.SetAsBox((width * 0.5f) / PPM, (height * 0.5f) / PPM);
+
+        b2FixtureDef fixtureDef;
+        fixtureDef.shape = &boxShape;
+        fixtureDef.density = body->density;
+        fixtureDef.friction = body->friction;
+        fixtureDef.restitution = body->restitution;
+
+        b2Fixture* b2_f = b2_b->CreateFixture(&fixtureDef);
+
+        body->b2_body = b2_b;
+        body->b2_fixture = b2_f;
+        body->syncFromB2(PPM);
+
         bodies.push_back(body);
         return body;
     }
@@ -76,6 +151,32 @@ public:
     std::shared_ptr<Constraint> createConstraint(ConstraintType type, std::shared_ptr<RigidBody> a, std::shared_ptr<RigidBody> b,
                                                  Vector2 localA, Vector2 localB, float length = -1.0f) {
         auto c = std::make_shared<Constraint>(nextConstraintId++, type, a.get(), b.get(), localA, localB, length);
+
+        if (a && b && a->b2_body && b->b2_body) {
+            b2Vec2 anchorA(localA.x / PPM, localA.y / PPM);
+            b2Vec2 anchorB(localB.x / PPM, localB.y / PPM);
+
+            if (type == CONSTRAINT_ROD || type == CONSTRAINT_SPRING || type == CONSTRAINT_ROPE) {
+                b2DistanceJointDef jd;
+                b2Vec2 worldA = a->b2_body->GetWorldPoint(anchorA);
+                b2Vec2 worldB = b->b2_body->GetWorldPoint(anchorB);
+                jd.Initialize(a->b2_body, b->b2_body, worldA, worldB);
+                if (length > 0.0f) {
+                    jd.length = length / PPM;
+                }
+                if (type == CONSTRAINT_ROD) {
+                    jd.minLength = jd.length;
+                    jd.maxLength = jd.length;
+                } else if (type == CONSTRAINT_ROPE) {
+                    jd.minLength = 0.0f;
+                    jd.maxLength = jd.length;
+                } else if (type == CONSTRAINT_SPRING) {
+                    b2LinearStiffness(jd.stiffness, jd.damping, 4.0f, 0.4f, a->b2_body, b->b2_body);
+                }
+                c->b2_joint = b2world->CreateJoint(&jd);
+            }
+        }
+
         constraints.push_back(c);
         return c;
     }
@@ -95,18 +196,25 @@ public:
         particleSystem.emitExplosion(epicenter, 45);
         addScorePopup(epicenter + Vector2(0, -30), "BOOM!", 0xFF3D00, 2.2f);
 
-        for (auto& b : bodies) {
-            if (b->bodyType == BODY_STATIC || b->isDead) continue;
+        b2Vec2 epicMeters(epicenter.x / PPM, epicenter.y / PPM);
+        float radiusMeters = radius / PPM;
 
-            Vector2 delta = b->position - epicenter;
-            float dist = delta.length();
-            if (dist < radius) {
-                float factor = 1.0f - (dist / radius);
-                Vector2 dir = (dist > 0.001f) ? (delta / dist) : Vector2(0, -1);
-                
-                // Blast impulse & upwards loft
-                Vector2 blastImpulse = (dir * maxForce * factor) + Vector2(0, -maxForce * factor * 0.5f);
-                b->applyImpulse(blastImpulse, Vector2(0, 0));
+        for (auto& b : bodies) {
+            if (b->isDead || !b->b2_body || b->bodyType == BODY_STATIC) continue;
+
+            b2Vec2 bPos = b->b2_body->GetPosition();
+            b2Vec2 delta = bPos - epicMeters;
+            float dist = delta.Length();
+
+            if (dist < radiusMeters) {
+                float factor = 1.0f - (dist / radiusMeters);
+                b2Vec2 dir = (dist > 0.001f) ? (1.0f / dist) * delta : b2Vec2(0.0f, -1.0f);
+
+                // Blast impulse & upwards loft in Box2D units
+                float impulseMag = (maxForce / PPM) * factor;
+                b2Vec2 blastImpulse = impulseMag * dir + b2Vec2(0.0f, -impulseMag * 0.4f);
+
+                b->b2_body->ApplyLinearImpulse(blastImpulse, b->b2_body->GetWorldCenter(), true);
                 b->takeDamage(damage * factor);
             }
         }
@@ -117,19 +225,38 @@ public:
         tntBody->isExploded = true;
         tntBody->isDead = true;
         totalScore += tntBody->scoreValue;
-        applyExplosion(tntBody->position, 220.0f, 3200.0f, 250.0f);
+        applyExplosion(tntBody->position, 240.0f, 3800.0f, 300.0f);
     }
 
     void step(float dt) {
         float scaledDt = dt * timeScale;
         if (scaledDt <= 0.0f) return;
 
-        // Substepping for rock-solid stability
-        const int subSteps = 4;
-        float subDt = scaledDt / (float)subSteps;
+        // Step Box2D world simulation (standard 8 velocity, 3 position iterations)
+        b2world->Step(scaledDt, 8, 3);
 
-        for (int stepIdx = 0; stepIdx < subSteps; ++stepIdx) {
-            stepSubStep(subDt, stepIdx == 0);
+        // Synchronize all rigid body positions & physics states from Box2D
+        for (auto& b : bodies) {
+            if (b->b2_body) {
+                b->syncFromB2(PPM);
+            }
+
+            if (b->damageFlash > 0.0f) {
+                b->damageFlash -= scaledDt;
+            }
+
+            // Projectile fuse countdown for Bomb bird
+            if (b->isProjectile && !b->isDead) {
+                b->flightTime += scaledDt;
+                if (b->fuseTimer > 0.0f) {
+                    b->fuseTimer -= scaledDt;
+                    particleSystem.emit(b->position + Vector2(0, -15), Vector2(0, -30), 0.3f, 3.0f, 0xFF9800, 0);
+                    if (b->fuseTimer <= 0.0f) {
+                        applyExplosion(b->position, 240.0f, 3600.0f, 350.0f);
+                        b->isDead = true;
+                    }
+                }
+            }
         }
 
         // Handle Destroyed Bodies & Targets
@@ -150,6 +277,13 @@ public:
                     particleSystem.emitDebris(b->position, b->color, 12);
                     addScorePopup(b->position, "+" + std::to_string(b->scoreValue), 0xFFD54F, 1.4f);
                 }
+
+                // Safely remove or disable Box2D body
+                if (b->b2_body) {
+                    b2world->DestroyBody(b->b2_body);
+                    b->b2_body = nullptr;
+                    b->b2_fixture = nullptr;
+                }
             }
         }
 
@@ -166,197 +300,66 @@ public:
             }
         }
     }
-
-private:
-    void stepSubStep(float subDt, bool isFirstSubStep) {
-        // 1. Update Projectile Fuse Timers & Flight Times
-        for (auto& b : bodies) {
-            if (b->isDead) continue;
-            if (isFirstSubStep && b->damageFlash > 0.0f) b->damageFlash -= subDt * 4.0f;
-
-            if (b->isProjectile) {
-                b->flightTime += subDt;
-
-                // Bomb fuse timer
-                if (b->fuseTimer > 0.0f) {
-                    b->fuseTimer -= subDt;
-                    particleSystem.emit(b->position + Vector2(0, -15), Vector2(0, -30), 0.3f, 3.0f, 0xFF9800, 0);
-                    if (b->fuseTimer <= 0.0f) {
-                        applyExplosion(b->position, 240.0f, 3600.0f, 350.0f);
-                        b->isDead = true;
-                    }
-                }
-
-                // Trail emission
-                if (b->velocity.length() > 60.0f) {
-                    if (b->projectileType == 1) { // Bomb
-                        particleSystem.emit(b->position, -b->velocity * 0.1f, 0.35f, 4.0f, 0x616161, 1);
-                    } else if (b->projectileType == 3 && b->abilityUsed) { // Drill rocket fire
-                        particleSystem.emit(b->position, -b->velocity * 0.2f, 0.4f, 6.0f, 0x00E676, 2);
-                    } else {
-                        particleSystem.emit(b->position, Vector2(0, -5), 0.25f, 2.5f, 0xFFFFFF, 1);
-                    }
-                }
-            }
-
-            // Kinematic & Dynamic integration
-            if (b->bodyType == BODY_DYNAMIC) {
-                b->velocity += (gravity + b->force * b->invMass) * subDt;
-                b->velocity *= (1.0f - airResistance * 0.5f);
-                b->angularVelocity += (b->torque * b->invInertia) * subDt;
-                b->angularVelocity *= (1.0f - airResistance * 1.5f);
-
-                // Gentle sleep damping for resting stacks
-                if (b->velocity.lengthSq() < 0.25f && std::abs(b->angularVelocity) < 0.05f) {
-                    b->velocity = Vector2(0, 0);
-                    b->angularVelocity = 0.0f;
-                }
-
-                b->position += b->velocity * subDt;
-                b->angle += b->angularVelocity * subDt;
-                b->updateWorldVertices();
-
-                b->force = Vector2(0, 0);
-                b->torque = 0.0f;
-            }
-        }
-
-        // 2. Constraints Solver
-        for (int iter = 0; iter < 4; ++iter) {
-            for (auto& c : constraints) {
-                if (!c->isActive) continue;
-                c->solve();
-            }
-        }
-
-        // 3. Collision Detection & Response
-        std::vector<Manifold> manifolds;
-        for (size_t i = 0; i < bodies.size(); ++i) {
-            for (size_t j = i + 1; j < bodies.size(); ++j) {
-                auto& a = bodies[i];
-                auto& b = bodies[j];
-                if (a->bodyType == BODY_STATIC && b->bodyType == BODY_STATIC) continue;
-                if (a->isDead || b->isDead) continue;
-
-                Manifold m;
-                if (Collision::checkCollision(a.get(), b.get(), m)) {
-                    manifolds.push_back(m);
-                }
-            }
-        }
-
-        // Sequential Impulse Solver
-        for (int iter = 0; iter < velocityIterations; ++iter) {
-            for (auto& m : manifolds) {
-                RigidBody* a = m.bodyA;
-                RigidBody* b = m.bodyB;
-                float numContacts = std::max(1.0f, (float)m.contacts.size());
-
-                for (auto& c : m.contacts) {
-                    Vector2 rA = c.point - a->position;
-                    Vector2 rB = c.point - b->position;
-
-                    Vector2 vA = a->velocity + Vector2(-a->angularVelocity * rA.y, a->angularVelocity * rA.x);
-                    Vector2 vB = b->velocity + Vector2(-b->angularVelocity * rB.y, b->angularVelocity * rB.x);
-                    Vector2 relativeVel = vB - vA;
-
-                    float contactVel = relativeVel.dot(m.normal);
-                    if (contactVel > 0.0f) continue; // Moving apart
-
-                    float rACrossN = rA.cross(m.normal);
-                    float rBCrossN = rB.cross(m.normal);
-                    float invMassSum = a->invMass + b->invMass + (rACrossN * rACrossN) * a->invInertia + (rBCrossN * rBCrossN) * b->invInertia;
-
-                    if (invMassSum <= 0.00001f) continue;
-
-                    // Restitution cutoff: Disable restitution at low velocities (< 60 px/s) to prevent resting vibration & structure collapse!
-                    float effectiveRestitution = (std::abs(contactVel) > 60.0f) ? m.restitution : 0.0f;
-                    float impulseMag = -(1.0f + effectiveRestitution) * contactVel / invMassSum;
-                    impulseMag /= numContacts;
-
-                    Vector2 impulse = m.normal * impulseMag;
-
-                    a->applyImpulse(-impulse, rA);
-                    b->applyImpulse(impulse, rB);
-
-                    // Friction Impulse
-                    Vector2 tangent = relativeVel - (m.normal * contactVel);
-                    float tanLen = tangent.length();
-                    if (tanLen > 0.001f) {
-                        tangent = tangent / tanLen;
-                        float rACrossT = rA.cross(tangent);
-                        float rBCrossT = rB.cross(tangent);
-                        float invMassSumT = a->invMass + b->invMass + (rACrossT * rACrossT) * a->invInertia + (rBCrossT * rBCrossT) * b->invInertia;
-                        float jt = -relativeVel.dot(tangent) / (invMassSumT + 0.0001f);
-                        jt /= numContacts;
-
-                        float maxFriction = impulseMag * m.dynamicFriction;
-                        jt = std::max(-maxFriction, std::min(maxFriction, jt));
-                        Vector2 frictionImpulse = tangent * jt;
-
-                        a->applyImpulse(-frictionImpulse, rA);
-                        b->applyImpulse(frictionImpulse, rB);
-                    }
-
-                    // Calculate Collision Damage from relative velocity impact (only on true impacts, not resting contact)
-                    float impactSpeed = std::abs(contactVel);
-                    if (impactSpeed > 220.0f && iter == 0) {
-                        float dmgA = (impactSpeed - 180.0f) * 0.4f * (b->mass / (a->mass + b->mass + 0.1f));
-                        float dmgB = (impactSpeed - 180.0f) * 0.4f * (a->mass / (a->mass + b->mass + 0.1f));
-
-                        if (a->isProjectile && a->projectileType == 3 && a->abilityUsed) {
-                            dmgB *= 3.5f;
-                        }
-                        if (b->isProjectile && b->projectileType == 3 && b->abilityUsed) {
-                            dmgA *= 3.5f;
-                        }
-
-                        a->takeDamage(dmgA);
-                        b->takeDamage(dmgB);
-
-                        // Trigger Bomb Bird fuse on first solid collision
-                        if (a->isProjectile && a->projectileType == 1 && a->fuseTimer < 0.0f) {
-                            a->fuseTimer = 1.2f;
-                        }
-                        if (b->isProjectile && b->projectileType == 1 && b->fuseTimer < 0.0f) {
-                            b->fuseTimer = 1.2f;
-                        }
-
-                        // Emit sparks and debris
-                        particleSystem.emitSparks(c.point, m.normal, 4);
-                        if (a->material == MAT_WOOD || b->material == MAT_WOOD) {
-                            particleSystem.emitDebris(c.point, 0x8D6E63, 3);
-                        } else if (a->material == MAT_STONE || b->material == MAT_STONE) {
-                            particleSystem.emitDebris(c.point, 0x78909C, 3);
-                        } else if (a->material == MAT_GLASS || b->material == MAT_GLASS) {
-                            particleSystem.emitDebris(c.point, 0x80DEEA, 5);
-                        }
-
-                        // TNT Impact Detonation
-                        if (a->material == MAT_TNT && impactSpeed > 280.0f) triggerTNT(a);
-                        if (b->material == MAT_TNT && impactSpeed > 280.0f) triggerTNT(b);
-                    }
-                }
-            }
-        }
-
-        // Positional Penetration Correction (Baumgarte stabilization)
-        const float percent = 0.25f;
-        const float slop = 0.1f;
-        for (auto& m : manifolds) {
-            RigidBody* a = m.bodyA;
-            RigidBody* b = m.bodyB;
-            float numContacts = std::max(1.0f, (float)m.contacts.size());
-            for (auto& c : m.contacts) {
-                float correctionMag = std::max(c.penetration - slop, 0.0f) / (a->invMass + b->invMass + 0.0001f) * (percent / numContacts);
-                Vector2 correction = m.normal * correctionMag;
-                if (a->bodyType == BODY_DYNAMIC) a->position -= correction * a->invMass;
-                if (b->bodyType == BODY_DYNAMIC) b->position += correction * b->invMass;
-                a->updateWorldVertices();
-                b->updateWorldVertices();
-            }
-        }
-    }
 };
+
+inline void GameContactListener::BeginContact(b2Contact* contact) {
+    b2Fixture* fA = contact->GetFixtureA();
+    b2Fixture* fB = contact->GetFixtureB();
+    if (!fA || !fB) return;
+
+    RigidBody* rbA = reinterpret_cast<RigidBody*>(fA->GetBody()->GetUserData().pointer);
+    RigidBody* rbB = reinterpret_cast<RigidBody*>(fB->GetBody()->GetUserData().pointer);
+
+    if (rbA && rbB) {
+        if (rbA->isProjectile && !rbA->isArmed) rbA->isArmed = true;
+        if (rbB->isProjectile && !rbB->isArmed) rbB->isArmed = true;
+    }
+}
+
+inline void GameContactListener::PostSolve(b2Contact* contact, const b2ContactImpulse* impulse) {
+    if (!impulse || impulse->count == 0) return;
+
+    b2Fixture* fA = contact->GetFixtureA();
+    b2Fixture* fB = contact->GetFixtureB();
+    if (!fA || !fB) return;
+
+    RigidBody* rbA = reinterpret_cast<RigidBody*>(fA->GetBody()->GetUserData().pointer);
+    RigidBody* rbB = reinterpret_cast<RigidBody*>(fB->GetBody()->GetUserData().pointer);
+    if (!rbA || !rbB) return;
+
+    float maxImpulse = 0.0f;
+    for (int i = 0; i < impulse->count; ++i) {
+        maxImpulse = std::max(maxImpulse, impulse->normalImpulses[i]);
+    }
+
+    // Impact damage threshold: Ignore resting static contact (< 4.5 N*s)
+    if (maxImpulse > 4.5f) {
+        float effectiveImpulse = maxImpulse - 4.0f;
+        float dmgA = effectiveImpulse * 14.0f * (rbB->mass / (rbA->mass + rbB->mass + 0.1f));
+        float dmgB = effectiveImpulse * 14.0f * (rbA->mass / (rbA->mass + rbB->mass + 0.1f));
+
+        // Drill Ability Boost
+        if (rbA->isProjectile && rbA->projectileType == 3 && rbA->abilityUsed) dmgB *= 3.5f;
+        if (rbB->isProjectile && rbB->projectileType == 3 && rbB->abilityUsed) dmgA *= 3.5f;
+
+        // Bombardier Impact Fuse
+        if (rbA->isProjectile && rbA->projectileType == 1 && rbA->fuseTimer < 0.0f) rbA->fuseTimer = 1.2f;
+        if (rbB->isProjectile && rbB->projectileType == 1 && rbB->fuseTimer < 0.0f) rbB->fuseTimer = 1.2f;
+
+        // Damage Bodies
+        if (rbA->bodyType == BODY_DYNAMIC) rbA->takeDamage(dmgA);
+        if (rbB->bodyType == BODY_DYNAMIC) rbB->takeDamage(dmgB);
+
+        // Trigger TNT on heavy impact
+        if (rbA->material == MAT_TNT && maxImpulse > 8.0f) world->triggerTNT(rbA);
+        if (rbB->material == MAT_TNT && maxImpulse > 8.0f) world->triggerTNT(rbB);
+
+        // Impact spark particles
+        b2WorldManifold worldManifold;
+        contact->GetWorldManifold(&worldManifold);
+        Vector2 contactPt(worldManifold.points[0].x * PhysicsWorld::PPM, worldManifold.points[0].y * PhysicsWorld::PPM);
+        world->particleSystem.emit(contactPt, Vector2(0, -30), 0.25f, 2.5f, 0xFFEB3B, 0);
+    }
+}
 
 #endif // PHYSICSWORLD_H

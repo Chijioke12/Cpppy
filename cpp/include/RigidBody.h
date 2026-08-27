@@ -2,9 +2,11 @@
 #define RIGIDBODY_H
 
 #include "Vector2.h"
+#include <box2d/box2d.h>
 #include <vector>
 #include <cmath>
 #include <string>
+#include <algorithm>
 
 enum ShapeType {
     SHAPE_CIRCLE = 0,
@@ -29,17 +31,6 @@ enum MaterialType {
     MAT_PROJECTILE = 7
 };
 
-struct AABB {
-    Vector2 min;
-    Vector2 max;
-
-    bool overlaps(const AABB& other) const {
-        if (max.x < other.min.x || min.x > other.max.x) return false;
-        if (max.y < other.min.y || min.y > other.max.y) return false;
-        return true;
-    }
-};
-
 class RigidBody {
 public:
     int id;
@@ -49,8 +40,12 @@ public:
     ShapeType shapeType;
     MaterialType material;
 
-    Vector2 position;
-    Vector2 velocity;
+    // Box2D body & fixture references
+    b2Body* b2_body;
+    b2Fixture* b2_fixture;
+
+    Vector2 position;      // in screen pixels
+    Vector2 velocity;      // in px/s
     Vector2 force;
 
     float angle;           // in radians
@@ -73,10 +68,9 @@ public:
     float width;
     float height;
 
-    // Polygon / Box local & world vertices
+    // Polygon / Box local & world vertices in pixel coordinates
     std::vector<Vector2> localVertices;
     std::vector<Vector2> worldVertices;
-    std::vector<Vector2> normals;
 
     // Gameplay & Destruction attributes
     float health;
@@ -103,6 +97,7 @@ public:
 
     RigidBody(int _id, BodyType _bType, ShapeType _sType, MaterialType _mat, Vector2 _pos)
         : id(_id), tag(""), textureKey(""), bodyType(_bType), shapeType(_sType), material(_mat),
+          b2_body(nullptr), b2_fixture(nullptr),
           position(_pos), velocity(0, 0), force(0, 0),
           angle(0.0f), angularVelocity(0.0f), torque(0.0f),
           mass(1.0f), invMass(1.0f), inertia(1.0f), invInertia(1.0f),
@@ -119,183 +114,141 @@ public:
     void applyMaterialProperties() {
         switch (material) {
             case MAT_WOOD:
-                density = 0.65f;
-                restitution = 0.25f;
+                density = 1.0f;
+                restitution = 0.15f;
                 friction = 0.55f;
                 health = maxHealth = 90.0f;
                 color = 0x8D6E63;
                 scoreValue = 500;
                 break;
             case MAT_STONE:
-                density = 2.4f;
-                restitution = 0.12f;
-                friction = 0.7f;
-                health = maxHealth = 240.0f;
+                density = 2.8f;
+                restitution = 0.08f;
+                friction = 0.75f;
+                health = maxHealth = 260.0f;
                 color = 0x78909C;
                 scoreValue = 800;
                 break;
             case MAT_GLASS:
-                density = 0.9f;
+                density = 0.85f;
                 restitution = 0.05f;
-                friction = 0.25f;
-                health = maxHealth = 30.0f;
+                friction = 0.3f;
+                health = maxHealth = 35.0f;
                 color = 0x80DEEA;
-                opacity = 0.85f;
-                scoreValue = 400;
+                scoreValue = 600;
                 break;
             case MAT_METAL:
-                density = 4.2f;
-                restitution = 0.18f;
-                friction = 0.4f;
-                health = maxHealth = 500.0f;
-                color = 0x546E7A;
+                density = 4.5f;
+                restitution = 0.04f;
+                friction = 0.6f;
+                health = maxHealth = 550.0f;
+                color = 0x455A64;
                 scoreValue = 1200;
                 break;
             case MAT_TNT:
-                density = 1.0f;
-                restitution = 0.2f;
-                friction = 0.5f;
-                health = maxHealth = 40.0f;
-                color = 0xE53935;
+                density = 1.2f;
+                restitution = 0.1f;
+                friction = 0.6f;
+                health = maxHealth = 25.0f;
+                color = 0xD32F2F;
                 scoreValue = 1500;
                 break;
             case MAT_TARGET:
-                density = 1.2f;
-                restitution = 0.35f;
+                density = 1.1f;
+                restitution = 0.12f;
                 friction = 0.5f;
-                health = maxHealth = 60.0f;
-                color = 0x7CB342;
+                health = maxHealth = 40.0f;
+                color = 0x76FF03;
                 isTarget = true;
                 scoreValue = 5000;
                 break;
             case MAT_RUBBER:
-                density = 1.1f;
-                restitution = 0.85f;
-                friction = 0.35f;
+                density = 1.0f;
+                restitution = 0.92f;
+                friction = 0.8f;
                 health = maxHealth = 150.0f;
-                color = 0xFF5252;
-                scoreValue = 600;
+                color = 0xE91E63;
+                scoreValue = 400;
                 break;
             case MAT_PROJECTILE:
                 density = 2.2f;
-                restitution = 0.3f;
+                restitution = 0.2f;
                 friction = 0.5f;
-                health = maxHealth = 500.0f;
-                color = 0xD32F2F;
+                health = maxHealth = 300.0f;
+                color = 0xF44336;
                 isProjectile = true;
                 scoreValue = 0;
                 break;
         }
     }
 
-    void setCircle(float _radius) {
-        shapeType = SHAPE_CIRCLE;
-        radius = _radius;
-        computeMass();
-    }
-
     void setBox(float w, float h) {
         shapeType = SHAPE_BOX;
         width = w;
         height = h;
-
-        localVertices.clear();
         float hw = w * 0.5f;
         float hh = h * 0.5f;
-        localVertices.push_back(Vector2(-hw, -hh));
-        localVertices.push_back(Vector2(hw, -hh));
-        localVertices.push_back(Vector2(hw, hh));
-        localVertices.push_back(Vector2(-hw, hh));
 
+        localVertices = {
+            Vector2(-hw, -hh),
+            Vector2(hw, -hh),
+            Vector2(hw, hh),
+            Vector2(-hw, hh)
+        };
         updateWorldVertices();
-        computeMass();
     }
 
-    void computeMass() {
-        if (bodyType == BODY_STATIC) {
-            mass = 0.0f;
-            invMass = 0.0f;
-            inertia = 0.0f;
-            invInertia = 0.0f;
-            return;
-        }
-
-        if (shapeType == SHAPE_CIRCLE) {
-            float area = 3.14159265f * radius * radius;
-            mass = density * (area / 100.0f);
-            inertia = 0.5f * mass * radius * radius;
-        } else {
-            float area = width * height;
-            mass = density * (area / 100.0f);
-            inertia = (1.0f / 12.0f) * mass * (width * width + height * height);
-        }
-
-        if (mass <= 0.0001f) mass = 0.0001f;
-        invMass = 1.0f / mass;
-        if (inertia <= 0.0001f) inertia = 0.0001f;
-        invInertia = 1.0f / inertia;
+    void setCircle(float r) {
+        shapeType = SHAPE_CIRCLE;
+        radius = r;
+        width = r * 2.0f;
+        height = r * 2.0f;
     }
 
     void updateWorldVertices() {
-        if (shapeType == SHAPE_CIRCLE) return;
-
         worldVertices.resize(localVertices.size());
-        normals.resize(localVertices.size());
-
+        float c = std::cos(angle);
+        float s = std::sin(angle);
         for (size_t i = 0; i < localVertices.size(); ++i) {
-            worldVertices[i] = position + localVertices[i].rotate(angle);
-        }
-
-        for (size_t i = 0; i < worldVertices.size(); ++i) {
-            size_t next = (i + 1) % worldVertices.size();
-            Vector2 edge = worldVertices[next] - worldVertices[i];
-            normals[i] = edge.perpendicular().normalized();
+            Vector2 v = localVertices[i];
+            worldVertices[i] = position + Vector2(v.x * c - v.y * s, v.x * s + v.y * c);
         }
     }
 
-    AABB getAABB() const {
-        AABB aabb;
-        if (shapeType == SHAPE_CIRCLE) {
-            aabb.min = Vector2(position.x - radius, position.y - radius);
-            aabb.max = Vector2(position.x + radius, position.y + radius);
-        } else {
-            if (worldVertices.empty()) {
-                aabb.min = position;
-                aabb.max = position;
-                return aabb;
-            }
-            aabb.min = worldVertices[0];
-            aabb.max = worldVertices[0];
-            for (size_t i = 1; i < worldVertices.size(); ++i) {
-                aabb.min.x = std::min(aabb.min.x, worldVertices[i].x);
-                aabb.min.y = std::min(aabb.min.y, worldVertices[i].y);
-                aabb.max.x = std::max(aabb.max.x, worldVertices[i].x);
-                aabb.max.y = std::max(aabb.max.y, worldVertices[i].y);
-            }
+    void syncFromB2(float ppm) {
+        if (!b2_body) return;
+
+        b2Vec2 pos = b2_body->GetPosition();
+        position = Vector2(pos.x * ppm, pos.y * ppm);
+        angle = b2_body->GetAngle();
+
+        b2Vec2 vel = b2_body->GetLinearVelocity();
+        velocity = Vector2(vel.x * ppm, vel.y * ppm);
+        angularVelocity = b2_body->GetAngularVelocity();
+        mass = b2_body->GetMass();
+        invMass = (mass > 0.0001f) ? 1.0f / mass : 0.0f;
+
+        if (shapeType == SHAPE_BOX || shapeType == SHAPE_POLYGON) {
+            updateWorldVertices();
         }
-        return aabb;
     }
 
-    void applyForce(const Vector2& f) {
-        if (bodyType == BODY_STATIC) return;
-        force += f;
+    void applyImpulse(Vector2 impulsePixels, Vector2 pointOffsetPixels, float ppm) {
+        if (!b2_body) return;
+        b2Vec2 imp(impulsePixels.x / ppm, impulsePixels.y / ppm);
+        b2Vec2 pt = b2_body->GetWorldPoint(b2Vec2(pointOffsetPixels.x / ppm, pointOffsetPixels.y / ppm));
+        b2_body->ApplyLinearImpulse(imp, pt, true);
     }
 
-    void applyForceAtPoint(const Vector2& f, const Vector2& pt) {
-        if (bodyType == BODY_STATIC) return;
-        force += f;
-        torque += (pt - position).cross(f);
+    void setVelocity(Vector2 velPixels, float ppm) {
+        velocity = velPixels;
+        if (b2_body) {
+            b2_body->SetLinearVelocity(b2Vec2(velPixels.x / ppm, velPixels.y / ppm));
+        }
     }
 
-    void applyImpulse(const Vector2& impulse, const Vector2& contactVector) {
-        if (bodyType == BODY_STATIC) return;
-        velocity += impulse * invMass;
-        angularVelocity += invInertia * contactVector.cross(impulse);
-    }
-
-    void takeDamage(float dmg) {
-        if (bodyType == BODY_STATIC) return;
-        health -= dmg;
+    void takeDamage(float amount) {
+        health -= amount;
         damageFlash = 0.25f;
         if (health <= 0.0f) {
             health = 0.0f;

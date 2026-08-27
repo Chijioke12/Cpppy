@@ -4,7 +4,7 @@ set -e
 # Setup Emscripten path if present in /tmp/emsdk
 export PATH="/tmp/bin:/tmp/emsdk/upstream/emscripten:/tmp/emsdk/upstream/bin:$PATH"
 
-echo "=== Building C++ Physics Game with Emscripten ==="
+echo "=== Building C++ Box2D Physics Game with Emscripten ==="
 
 mkdir -p dist
 mkdir -p public
@@ -17,6 +17,15 @@ em++ -O3 -std=c++17 \
   --minify 0 \
   --shell-file shell_minimal.html \
   -I./cpp/include \
+  -I./cpp/src/box2d_src \
+  -I./cpp/src/box2d_src/dynamics \
+  -I./cpp/src/box2d_src/collision \
+  -I./cpp/src/box2d_src/common \
+  -I./cpp/src/box2d_src/rope \
+  ./cpp/src/box2d_src/collision/*.cpp \
+  ./cpp/src/box2d_src/common/*.cpp \
+  ./cpp/src/box2d_src/dynamics/*.cpp \
+  ./cpp/src/box2d_src/rope/*.cpp \
   ./cpp/src/main.cpp \
   -o ./dist/index.html
 

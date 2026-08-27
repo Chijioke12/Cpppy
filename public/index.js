@@ -7669,7 +7669,7 @@ Module["createContext"] = createContext;
 // End JS library exports
 // end include: postlibrary.js
 var ASM_CONSTS = {
-  256516: $0 => {
+  264328: $0 => {
     var str = UTF8ToString($0) + "\n\n" + "Abort/Retry/Ignore/AlwaysIgnore? [ariA] :";
     var reply = window.prompt(str, "i");
     if (reply === null) {
@@ -7677,7 +7677,7 @@ var ASM_CONSTS = {
     }
     return reply.length === 1 ? reply.charCodeAt(0) : -1;
   },
-  256731: () => {
+  264543: () => {
     if (typeof (AudioContext) !== "undefined") {
       return true;
     } else if (typeof (webkitAudioContext) !== "undefined") {
@@ -7685,7 +7685,7 @@ var ASM_CONSTS = {
     }
     return false;
   },
-  256878: () => {
+  264690: () => {
     if ((typeof (navigator.mediaDevices) !== "undefined") && (typeof (navigator.mediaDevices.getUserMedia) !== "undefined")) {
       return true;
     } else if (typeof (navigator.webkitGetUserMedia) !== "undefined") {
@@ -7693,7 +7693,7 @@ var ASM_CONSTS = {
     }
     return false;
   },
-  257112: $0 => {
+  264924: $0 => {
     if (typeof (Module["SDL2"]) === "undefined") {
       Module["SDL2"] = {};
     }
@@ -7717,11 +7717,11 @@ var ASM_CONSTS = {
     }
     return SDL2.audioContext === undefined ? -1 : 0;
   },
-  257664: () => {
+  265476: () => {
     var SDL2 = Module["SDL2"];
     return SDL2.audioContext.sampleRate;
   },
-  257732: ($0, $1, $2, $3) => {
+  265544: ($0, $1, $2, $3) => {
     var SDL2 = Module["SDL2"];
     var have_microphone = function(stream) {
       if (SDL2.capture.silenceTimer !== undefined) {
@@ -7763,7 +7763,7 @@ var ASM_CONSTS = {
       }, have_microphone, no_microphone);
     }
   },
-  259425: ($0, $1, $2, $3) => {
+  267237: ($0, $1, $2, $3) => {
     var SDL2 = Module["SDL2"];
     SDL2.audio.scriptProcessorNode = SDL2.audioContext["createScriptProcessor"]($1, 0, $0);
     SDL2.audio.scriptProcessorNode["onaudioprocess"] = function(e) {
@@ -7795,7 +7795,7 @@ var ASM_CONSTS = {
       SDL2.audio.silenceTimer = setInterval(silence_callback, ($1 / SDL2.audioContext.sampleRate) * 1e3);
     }
   },
-  260600: ($0, $1) => {
+  268412: ($0, $1) => {
     var SDL2 = Module["SDL2"];
     var numChannels = SDL2.capture.currentCaptureBuffer.numberOfChannels;
     for (var c = 0; c < numChannels; ++c) {
@@ -7814,7 +7814,7 @@ var ASM_CONSTS = {
       }
     }
   },
-  261205: ($0, $1) => {
+  269017: ($0, $1) => {
     var SDL2 = Module["SDL2"];
     var buf = $0 >>> 2;
     var numChannels = SDL2.audio.currentOutputBuffer["numberOfChannels"];
@@ -7828,7 +7828,7 @@ var ASM_CONSTS = {
       }
     }
   },
-  261694: $0 => {
+  269506: $0 => {
     var SDL2 = Module["SDL2"];
     if ($0) {
       if (SDL2.capture.silenceTimer !== undefined) {
@@ -7862,7 +7862,7 @@ var ASM_CONSTS = {
       SDL2.audioContext = undefined;
     }
   },
-  262700: ($0, $1, $2) => {
+  270512: ($0, $1, $2) => {
     var w = $0;
     var h = $1;
     var pixels = $2;
@@ -7933,7 +7933,7 @@ var ASM_CONSTS = {
     }
     SDL2.ctx.putImageData(SDL2.image, 0, 0);
   },
-  264166: ($0, $1, $2, $3, $4) => {
+  271978: ($0, $1, $2, $3, $4) => {
     var w = $0;
     var h = $1;
     var hot_x = $2;
@@ -7970,18 +7970,18 @@ var ASM_CONSTS = {
     stringToUTF8(url, urlBuf, url.length + 1);
     return urlBuf;
   },
-  265154: $0 => {
+  272966: $0 => {
     if (Module["canvas"]) {
       Module["canvas"].style["cursor"] = UTF8ToString($0);
     }
   },
-  265237: () => {
+  273049: () => {
     if (Module["canvas"]) {
       Module["canvas"].style["cursor"] = "none";
     }
   },
-  265306: () => window.innerWidth,
-  265336: () => window.innerHeight
+  273118: () => window.innerWidth,
+  273148: () => window.innerHeight
 };
 
 // Imports from the Wasm binary.
@@ -7998,7 +7998,7 @@ function assignWasmExports(wasmExports) {
 }
 
 var wasmImports = {
-  /** @export */ b: ___assert_fail,
+  /** @export */ a: ___assert_fail,
   /** @export */ J: ___cxa_throw,
   /** @export */ I: ___syscall_fcntl64,
   /** @export */ Xa: ___syscall_ioctl,
@@ -8024,7 +8024,7 @@ var wasmImports = {
   /** @export */ Ab: _eglWaitGL,
   /** @export */ pb: _eglWaitNative,
   /** @export */ Aa: _emscripten_asm_const_int,
-  /** @export */ a: _emscripten_asm_const_int_sync_on_main_thread,
+  /** @export */ b: _emscripten_asm_const_int_sync_on_main_thread,
   /** @export */ Ea: _emscripten_asm_const_ptr_sync_on_main_thread,
   /** @export */ Ha: _emscripten_cancel_main_loop,
   /** @export */ Za: _emscripten_date_now,

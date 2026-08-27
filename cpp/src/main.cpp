@@ -15,7 +15,6 @@
 #include "../include/Vector2.h"
 #include "../include/RigidBody.h"
 #include "../include/Constraint.h"
-#include "../include/Collision.h"
 #include "../include/ParticleSystem.h"
 #include "../include/PhysicsWorld.h"
 #include "../include/GameLevels.h"
@@ -131,10 +130,10 @@ static void launchBird() {
 
     // Create active flight bird
     auto bird = g_world.createCircle(BODY_DYNAMIC, MAT_PROJECTILE, g_slingshotPos, 22.0f);
-    bird->velocity = launchVelocity;
     bird->projectileType = g_activeBirdType;
     bird->textureKey = getBirdTextureKey(g_activeBirdType);
     bird->isArmed = true;
+    bird->setVelocity(launchVelocity, PhysicsWorld::PPM);
 
     if (g_activeBirdType == 0) { // Red Striker
         bird->mass = 4.5f;
@@ -174,7 +173,7 @@ static void triggerBirdAbility() {
 
     if (type == 0) {
         // Red Striker: Kinetic forward battle cry boost
-        g_activeFlightBird->velocity = vel.normalized() * (vel.length() + 350.0f);
+        g_activeFlightBird->setVelocity(vel.normalized() * (vel.length() + 350.0f), PhysicsWorld::PPM);
         g_world.particleSystem.emitExplosion(pos, 15);
         g_world.addScorePopup(pos, "WAR CRY!", 0xFF5252, 1.8f);
     } else if (type == 1) {
@@ -193,26 +192,28 @@ static void triggerBirdAbility() {
         auto b1 = g_world.createCircle(BODY_DYNAMIC, MAT_PROJECTILE, pos + Vector2(0, -10), 16.0f);
         b1->projectileType = 2;
         b1->textureKey = "projectile_split";
-        b1->velocity = Vector2(std::cos(baseAngle - 0.26f), std::sin(baseAngle - 0.26f)) * currentSpeed;
+        Vector2 vel1 = Vector2(std::cos(baseAngle - 0.26f), std::sin(baseAngle - 0.26f)) * currentSpeed;
+        b1->setVelocity(vel1, PhysicsWorld::PPM);
         b1->abilityUsed = true;
 
         // Projectile 2 (Low -15 deg)
         auto b2 = g_world.createCircle(BODY_DYNAMIC, MAT_PROJECTILE, pos + Vector2(0, 10), 16.0f);
         b2->projectileType = 2;
         b2->textureKey = "projectile_split";
-        b2->velocity = Vector2(std::cos(baseAngle + 0.26f), std::sin(baseAngle + 0.26f)) * currentSpeed;
+        Vector2 vel2 = Vector2(std::cos(baseAngle + 0.26f), std::sin(baseAngle + 0.26f)) * currentSpeed;
+        b2->setVelocity(vel2, PhysicsWorld::PPM);
         b2->abilityUsed = true;
 
         // Main projectile stays center
         g_activeFlightBird->radius = 16.0f;
     } else if (type == 3) {
         // Iron Drill: Supersonic thruster boost
-        g_activeFlightBird->velocity = vel.normalized() * (vel.length() * 2.2f + 500.0f);
+        g_activeFlightBird->setVelocity(vel.normalized() * (vel.length() * 2.2f + 500.0f), PhysicsWorld::PPM);
         g_world.addScorePopup(pos, "DRILL HYPER DRIVE!", 0x00E676, 2.0f);
         g_world.particleSystem.emitExplosion(pos, 25);
     } else if (type == 4) {
         // Rubber Ricochet: Mega slam bounce
-        g_activeFlightBird->velocity = Vector2(vel.x * 1.3f, 600.0f);
+        g_activeFlightBird->setVelocity(Vector2(vel.x * 1.3f, 600.0f), PhysicsWorld::PPM);
         g_world.addScorePopup(pos, "SUPER BOUNCE!", 0xFF4081, 1.8f);
         g_world.particleSystem.emitExplosion(pos, 15);
     }
