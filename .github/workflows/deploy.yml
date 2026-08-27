@@ -31,11 +31,21 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Setup Emscripten SDK
         uses: mymindstorm/setup-emsdk@v14
         with:
           version: 3.1.56
           actions-cache-folder: 'emsdk-cache'
+
+      - name: Install dependencies & Generate Asset Textures
+        run: |
+          npm ci || npm install
+          node scripts/generate_svg_assets.js
 
       - name: Verify Emscripten Installation
         run: |
@@ -44,16 +54,8 @@ jobs:
 
       - name: Build C++ Game with Emscripten
         run: |
-          mkdir -p dist
-          em++ -O3 -std=c++17 \
-            -s USE_SDL=2 \
-            -s WASM=1 \
-            -s ALLOW_MEMORY_GROWTH=1 \
-            -s NO_EXIT_RUNTIME=1 \
-            --shell-file shell_minimal.html \
-            -I./cpp/include \
-            ./cpp/src/main.cpp \
-            -o ./dist/index.html
+          chmod +x ./build.sh
+          ./build.sh
 
       - name: Upload Pages Artifact
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
