@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+      <defs>
+        <radialGradient id="pigGreen2" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#AEEA00"/>
+          <stop offset="60%" stop-color="#7CB342"/>
+          <stop offset="100%" stop-color="#33691E"/>
+        </radialGradient>
+        <linearGradient id="helmGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#CFD8DC"/>
+          <stop offset="40%" stop-color="#78909C"/>
+          <stop offset="100%" stop-color="#37474F"/>
+        </linearGradient>
+      </defs>
+      <!-- Base Body -->
+      <circle cx="32" cy="36" r="22" fill="url(#pigGreen2)" stroke="#2E7D32" stroke-width="2"/>
+      <!-- Knight Helmet Dome -->
+      <path d="M 12 30 C 12 12, 52 12, 52 30 L 54 32 L 10 32 Z" fill="url(#helmGrad)" stroke="#263238" stroke-width="2"/>
+      <!-- Helmet Crest & Visor Rim -->
+      <rect x="8" y="29" width="48" height="5" rx="2" fill="#90A4AE" stroke="#263238" stroke-width="1.5"/>
+      <circle cx="32" cy="11" r="4" fill="#B0BEC5" stroke="#263238" stroke-width="1"/>
+      <path d="M 32 7 Q 38 1, 46 4" fill="none" stroke="#D32F2F" stroke-width="3" stroke-linecap="round"/>
+      <!-- Eyes peering under helm -->
+      <circle cx="23" cy="38" r="5" fill="#FFF"/>
+      <circle cx="23" cy="38" r="2.2" fill="#212121"/>
+      <circle cx="41" cy="38" r="5" fill="#FFF"/>
+      <circle cx="41" cy="38" r="2.2" fill="#212121"/>
+      <!-- Snout -->
+      <ellipse cx="32" cy="46" rx="8.5" ry="6" fill="#8BC34A" stroke="#33691E" stroke-width="1.5"/>
+      <circle cx="29" cy="46" r="2" fill="#33691E"/>
+      <circle cx="35" cy="46" r="2" fill="#33691E"/>
+    </svg>

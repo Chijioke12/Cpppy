@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+      <defs>
+        <radialGradient id="kingPig" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#C6FF00"/>
+          <stop offset="60%" stop-color="#84CC16"/>
+          <stop offset="100%" stop-color="#3F6212"/>
+        </radialGradient>
+        <linearGradient id="goldCrown" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#FDE047"/>
+          <stop offset="50%" stop-color="#EAB308"/>
+          <stop offset="100%" stop-color="#A16207"/>
+        </linearGradient>
+      </defs>
+      <!-- Ears -->
+      <ellipse cx="12" cy="24" rx="5" ry="8" transform="rotate(-25 12 24)" fill="#84CC16" stroke="#3F6212" stroke-width="1.5"/>
+      <ellipse cx="52" cy="24" rx="5" ry="8" transform="rotate(25 52 24)" fill="#84CC16" stroke="#3F6212" stroke-width="1.5"/>
+      <!-- Body -->
+      <circle cx="32" cy="38" r="22" fill="url(#kingPig)" stroke="#3F6212" stroke-width="2.5"/>
+      <!-- Golden Crown -->
+      <polygon points="16,24 20,10 27,18 32,7 37,18 44,10 48,24" fill="url(#goldCrown)" stroke="#713F12" stroke-width="1.5"/>
+      <!-- Crown Jewels -->
+      <circle cx="32" cy="11" r="2" fill="#EF4444"/>
+      <circle cx="20" cy="13" r="1.5" fill="#3B82F6"/>
+      <circle cx="44" cy="13" r="1.5" fill="#3B82F6"/>
+      <rect x="16" y="22" width="32" height="4" fill="#CA8A04" stroke="#713F12" stroke-width="1"/>
+      <!-- Royal Mustache -->
+      <path d="M 22 43 C 26 40, 32 44, 32 44 C 32 44, 38 40, 42 43 C 40 47, 34 46, 32 45 C 30 46, 24 47, 22 43 Z" fill="#65A30D" stroke="#365314" stroke-width="1"/>
+      <!-- Royal Eyes -->
+      <circle cx="23" cy="32" r="5" fill="#FFF"/>
+      <circle cx="24" cy="32" r="2.2" fill="#18181B"/>
+      <circle cx="41" cy="32" r="5" fill="#FFF"/>
+      <circle cx="40" cy="32" r="2.2" fill="#18181B"/>
+      <!-- Royal Snout -->
+      <ellipse cx="32" cy="39" rx="8" ry="5.5" fill="#A3E635" stroke="#3F6212" stroke-width="1.5"/>
+      <circle cx="29" cy="39" r="1.8" fill="#365314"/>
+      <circle cx="35" cy="39" r="1.8" fill="#365314"/>
+    </svg>

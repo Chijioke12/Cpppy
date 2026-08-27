@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" width="120" height="32">
+      <defs>
+        <linearGradient id="girderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#90A4AE"/>
+          <stop offset="40%" stop-color="#546E7A"/>
+          <stop offset="100%" stop-color="#263238"/>
+        </linearGradient>
+      </defs>
+      <!-- Girder Body -->
+      <rect x="2" y="2" width="116" height="28" rx="3" fill="url(#girderGrad)" stroke="#1A237E" stroke-width="2"/>
+      <!-- I-Beam Flanges -->
+      <rect x="2" y="2" width="116" height="6" fill="#78909C" stroke="#263238" stroke-width="1"/>
+      <rect x="2" y="24" width="116" height="6" fill="#37474F" stroke="#263238" stroke-width="1"/>
+      <!-- Triangular Truss Openings -->
+      <polygon points="16,10 28,10 22,22" fill="#1E293B" stroke="#37474F" stroke-width="1"/>
+      <polygon points="40,22 52,22 46,10" fill="#1E293B" stroke="#37474F" stroke-width="1"/>
+      <polygon points="64,10 76,10 70,22" fill="#1E293B" stroke="#37474F" stroke-width="1"/>
+      <polygon points="88,22 100,22 94,10" fill="#1E293B" stroke="#37474F" stroke-width="1"/>
+      <!-- Heavy Hex Bolts -->
+      <circle cx="8" cy="5" r="1.8" fill="#ECEFF1"/>
+      <circle cx="112" cy="5" r="1.8" fill="#ECEFF1"/>
+      <circle cx="8" cy="27" r="1.8" fill="#ECEFF1"/>
+      <circle cx="112" cy="27" r="1.8" fill="#ECEFF1"/>
+    </svg>

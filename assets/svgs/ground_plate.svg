@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 100" width="1200" height="100">
+      <defs>
+        <linearGradient id="groundSoil" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#84CC16"/>
+          <stop offset="12%" stop-color="#4D7C0F"/>
+          <stop offset="25%" stop-color="#78350F"/>
+          <stop offset="100%" stop-color="#451A03"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="1200" height="100" fill="url(#groundSoil)"/>
+      <!-- Grass Tufts Fringe on Top -->
+      <path d="M 0 0 Q 30 8, 60 0 Q 90 8, 120 0 Q 150 8, 180 0 Q 210 8, 240 0 Q 270 8, 300 0 Q 330 8, 360 0 Q 390 8, 420 0 Q 450 8, 480 0 Q 510 8, 540 0 Q 570 8, 600 0 Q 630 8, 660 0 Q 690 8, 720 0 Q 750 8, 780 0 Q 810 8, 840 0 Q 870 8, 900 0 Q 930 8, 960 0 Q 990 8, 1020 0 Q 1050 8, 1080 0 Q 1110 8, 1140 0 Q 1170 8, 1200 0 L 1200 10 L 0 10 Z" fill="#A3E635"/>
+      <!-- Soil Stratum Pebbles -->
+      <circle cx="150" cy="45" r="6" fill="#573a25"/>
+      <circle cx="180" cy="55" r="4" fill="#362215"/>
+      <circle cx="450" cy="50" r="7" fill="#573a25"/>
+      <circle cx="750" cy="40" r="5" fill="#362215"/>
+      <circle cx="1020" cy="60" r="6" fill="#573a25"/>
+    </svg>

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+      <defs>
+        <radialGradient id="bombGrad" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#424242"/>
+          <stop offset="50%" stop-color="#212121"/>
+          <stop offset="100%" stop-color="#000000"/>
+        </radialGradient>
+        <radialGradient id="sparkGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FFF9C4"/>
+          <stop offset="40%" stop-color="#FFB300"/>
+          <stop offset="100%" stop-color="#FF3D00"/>
+        </radialGradient>
+      </defs>
+      <!-- Fuse -->
+      <path d="M 32 16 Q 38 6, 48 8" fill="none" stroke="#8D6E63" stroke-width="3.5" stroke-linecap="round"/>
+      <!-- Glowing Fuse Spark -->
+      <circle cx="48" cy="8" r="6" fill="url(#sparkGrad)"/>
+      <line x1="48" y1="2" x2="48" y2="14" stroke="#FFF" stroke-width="1.5"/>
+      <line x1="42" y1="8" x2="54" y2="8" stroke="#FFF" stroke-width="1.5"/>
+      <!-- Cap -->
+      <rect x="27" y="14" width="10" height="6" rx="2" fill="#757575" stroke="#212121" stroke-width="1"/>
+      <!-- Bomb Body -->
+      <circle cx="32" cy="36" r="24" fill="url(#bombGrad)" stroke="#111" stroke-width="2.5"/>
+      <!-- Forehead Fuse Feather (Yellow Tip) -->
+      <path d="M 32 12 Q 28 4, 32 2 Q 36 4, 32 12 Z" fill="#FFEB3B"/>
+      <!-- Eyes & Brow -->
+      <circle cx="28" cy="33" r="5.5" fill="#FFFFFF"/>
+      <circle cx="30" cy="33" r="2.5" fill="#212121"/>
+      <circle cx="42" cy="33" r="5.5" fill="#FFFFFF"/>
+      <circle cx="40" cy="33" r="2.5" fill="#212121"/>
+      <!-- Big Red Angered Eyebrows -->
+      <polygon points="20,24 35,30 35,27 20,22" fill="#E53935"/>
+      <polygon points="35,30 50,24 50,22 35,27" fill="#E53935"/>
+      <!-- Beak -->
+      <polygon points="31,37 41,37 36,46" fill="#FFA000" stroke="#E65100" stroke-width="1"/>
+      <!-- Chest Spot -->
+      <circle cx="32" cy="49" r="6" fill="#37474F"/>
+    </svg>

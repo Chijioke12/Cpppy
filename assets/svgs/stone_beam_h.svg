@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 28" width="120" height="28">
+      <defs>
+        <linearGradient id="stoneH" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#CFD8DC"/>
+          <stop offset="40%" stop-color="#90A4AE"/>
+          <stop offset="100%" stop-color="#455A64"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="116" height="24" rx="3" fill="url(#stoneH)" stroke="#263238" stroke-width="2"/>
+      <polyline points="4,24 4,4 116,4" fill="none" stroke="#ECEFF1" stroke-width="1.5" opacity="0.8"/>
+      <!-- Masonry Section Lines -->
+      <line x1="40" y1="4" x2="40" y2="24" stroke="#263238" stroke-width="1.5"/>
+      <line x1="80" y1="4" x2="80" y2="24" stroke="#263238" stroke-width="1.5"/>
+      <path d="M 48 10 L 58 14 L 64 12" fill="none" stroke="#37474F" stroke-width="1.2"/>
+    </svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+      <defs>
+        <linearGradient id="woodSquare" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#A1887F"/>
+          <stop offset="50%" stop-color="#795548"/>
+          <stop offset="100%" stop-color="#4E342E"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="44" height="44" rx="4" fill="url(#woodSquare)" stroke="#3E2723" stroke-width="2.5"/>
+      <!-- Wood Bevel Inner Frame -->
+      <rect x="6" y="6" width="36" height="36" rx="2" fill="none" stroke="#BCAAA4" stroke-width="1.2" opacity="0.7"/>
+      <!-- Wood Grain Details -->
+      <path d="M 6 18 Q 24 16, 42 18" fill="none" stroke="#3E2723" stroke-width="1.5" opacity="0.7"/>
+      <path d="M 6 30 Q 24 33, 42 30" fill="none" stroke="#3E2723" stroke-width="1.5" opacity="0.7"/>
+      <!-- Knothole -->
+      <ellipse cx="28" cy="24" rx="4" ry="2.5" fill="#3E2723" opacity="0.6"/>
+      <circle cx="28" cy="24" r="1.2" fill="#5D4037"/>
+      <!-- Corner Nails -->
+      <circle cx="6" cy="6" r="1.5" fill="#37474F"/>
+      <circle cx="42" cy="6" r="1.5" fill="#37474F"/>
+      <circle cx="6" cy="42" r="1.5" fill="#37474F"/>
+      <circle cx="42" cy="42" r="1.5" fill="#37474F"/>
+    </svg>

@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+      <defs>
+        <radialGradient id="metalSphere" cx="35%" cy="30%" r="65%">
+          <stop offset="0%" stop-color="#B0BEC5"/>
+          <stop offset="50%" stop-color="#78909C"/>
+          <stop offset="100%" stop-color="#37474F"/>
+        </radialGradient>
+        <linearGradient id="drillMetal" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#ECEFF1"/>
+          <stop offset="50%" stop-color="#B0BEC5"/>
+          <stop offset="100%" stop-color="#546E7A"/>
+        </linearGradient>
+      </defs>
+      <!-- Heavy Iron Sphere -->
+      <circle cx="28" cy="32" r="22" fill="url(#metalSphere)" stroke="#263238" stroke-width="2.5"/>
+      <!-- Iron Rivets -->
+      <circle cx="16" cy="22" r="2" fill="#CFD8DC" stroke="#263238" stroke-width="0.8"/>
+      <circle cx="14" cy="34" r="2" fill="#CFD8DC" stroke="#263238" stroke-width="0.8"/>
+      <circle cx="18" cy="44" r="2" fill="#CFD8DC" stroke="#263238" stroke-width="0.8"/>
+      <!-- Glowing Cyber Visor Eyes -->
+      <path d="M 22 25 L 36 28 L 34 33 L 22 30 Z" fill="#00E676" stroke="#1B5E20" stroke-width="1"/>
+      <line x1="24" y1="27" x2="34" y2="29" stroke="#E8F5E9" stroke-width="1.5"/>
+      <!-- Front Steel Drill Cone -->
+      <polygon points="34,22 62,32 34,42" fill="url(#drillMetal)" stroke="#263238" stroke-width="2"/>
+      <!-- Drill Grooves -->
+      <path d="M 40 25 Q 46 32, 40 39" fill="none" stroke="#37474F" stroke-width="2"/>
+      <path d="M 48 27 Q 53 32, 48 37" fill="none" stroke="#37474F" stroke-width="2"/>
+      <path d="M 55 30 Q 58 32, 55 34" fill="none" stroke="#37474F" stroke-width="1.5"/>
+    </svg>

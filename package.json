@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "vite": "^6.2.3"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2"
   }
 }

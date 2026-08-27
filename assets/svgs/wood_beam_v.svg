@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 120" width="28" height="120">
+      <defs>
+        <linearGradient id="woodBeamV" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#BCAAA4"/>
+          <stop offset="30%" stop-color="#8D6E63"/>
+          <stop offset="70%" stop-color="#6D4C41"/>
+          <stop offset="100%" stop-color="#4E342E"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="24" height="116" rx="3" fill="url(#woodBeamV)" stroke="#3E2723" stroke-width="2"/>
+      <line x1="10" y1="4" x2="10" y2="116" stroke="#3E2723" stroke-width="1.2" opacity="0.6"/>
+      <line x1="18" y1="4" x2="18" y2="116" stroke="#3E2723" stroke-width="1.2" opacity="0.6"/>
+      <circle cx="14" cy="8" r="1.8" fill="#37474F"/>
+      <circle cx="14" cy="112" r="1.8" fill="#37474F"/>
+    </svg>

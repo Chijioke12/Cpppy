@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" width="52" height="52">
+      <defs>
+        <radialGradient id="tntBg" cx="30%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#EF5350"/>
+          <stop offset="60%" stop-color="#C62828"/>
+          <stop offset="100%" stop-color="#7F0000"/>
+        </radialGradient>
+      </defs>
+      <!-- Crate Outline -->
+      <rect x="2" y="2" width="48" height="48" rx="4" fill="url(#tntBg)" stroke="#3E2723" stroke-width="2.5"/>
+      <!-- Diagonal Yellow/Black Hazard Stripes on Border -->
+      <path d="M 4 4 L 48 48 M 4 48 L 48 4" stroke="#FFE082" stroke-width="3" opacity="0.6"/>
+      <!-- Wood Frame Edge -->
+      <rect x="6" y="6" width="40" height="40" fill="none" stroke="#4E342E" stroke-width="3"/>
+      <!-- TNT Danger Banner Center -->
+      <rect x="8" y="16" width="36" height="20" rx="3" fill="#212121" stroke="#FFD54F" stroke-width="1.5"/>
+      <!-- Bold TNT Text -->
+      <text x="26" y="31" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="14" fill="#FFEB3B" text-anchor="middle" letter-spacing="1">TNT</text>
+      <!-- Glowing Fuse at Top -->
+      <circle cx="26" cy="4" r="3" fill="#FF5722"/>
+      <circle cx="26" cy="4" r="1.5" fill="#FFEB3B"/>
+    </svg>

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" width="1200" height="700">
+      <defs>
+        <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#0284C7"/>
+          <stop offset="35%" stop-color="#38BDF8"/>
+          <stop offset="65%" stop-color="#BAE6FD"/>
+          <stop offset="90%" stop-color="#FEF08A"/>
+          <stop offset="100%" stop-color="#FED7AA"/>
+        </linearGradient>
+        <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#FFFBEB" stop-opacity="1"/>
+          <stop offset="40%" stop-color="#FDE047" stop-opacity="0.8"/>
+          <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="mtnFar" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#93C5FD"/>
+          <stop offset="100%" stop-color="#60A5FA"/>
+        </linearGradient>
+        <linearGradient id="mtnMid" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#475569"/>
+          <stop offset="100%" stop-color="#334155"/>
+        </linearGradient>
+        <linearGradient id="hillBack" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#65A30D"/>
+          <stop offset="100%" stop-color="#4D7C0F"/>
+        </linearGradient>
+        <linearGradient id="hillFront" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#84CC16"/>
+          <stop offset="100%" stop-color="#3F6212"/>
+        </linearGradient>
+      </defs>
+      <!-- Sky -->
+      <rect width="1200" height="700" fill="url(#skyGrad)"/>
+      <!-- Sun -->
+      <circle cx="950" cy="180" r="140" fill="url(#sunGlow)"/>
+      <circle cx="950" cy="180" r="45" fill="#FFFBEB"/>
+
+      <!-- Fluffy Stylized Clouds -->
+      <!-- Cloud 1 -->
+      <path d="M 120 180 Q 140 140, 180 150 Q 220 120, 260 150 Q 300 140, 320 180 Q 340 210, 300 220 L 140 220 Q 100 210, 120 180 Z" fill="#FFFFFF" opacity="0.85"/>
+      <!-- Cloud 2 -->
+      <path d="M 520 120 Q 545 90, 580 100 Q 615 75, 650 100 Q 685 90, 700 120 Q 720 145, 680 155 L 540 155 Q 500 145, 520 120 Z" fill="#FFFFFF" opacity="0.75"/>
+
+      <!-- Distant Mountain Range -->
+      <polygon points="-50,600 180,320 340,480 520,290 750,520 920,310 1150,550 1250,600 1250,700 -50,700" fill="url(#mtnFar)" opacity="0.6"/>
+      <!-- Mid Mountain Range -->
+      <polygon points="-50,600 120,380 280,510 460,360 680,540 850,390 1060,560 1250,620 1250,700 -50,700" fill="url(#mtnMid)" opacity="0.7"/>
+
+      <!-- Rolling Green Hills Layer 1 -->
+      <path d="M -50 560 Q 200 480, 480 540 Q 780 600, 1050 510 Q 1180 480, 1250 520 L 1250 700 L -50 700 Z" fill="url(#hillBack)"/>
+      <!-- Rolling Green Hills Layer 2 (Foreground) -->
+      <path d="M -50 620 Q 250 560, 550 610 Q 880 660, 1250 580 L 1250 700 L -50 700 Z" fill="url(#hillFront)"/>
+    </svg>

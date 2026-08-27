@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>C++ Physics Engine Game (Emscripten / WebAssembly)</title>
+  <title>C++ Physics Catapult Game (Emscripten / WebAssembly)</title>
   <style>
     * {
       box-sizing: border-box;
@@ -72,13 +72,6 @@
     .btn:hover {
       background: #334155;
       color: #FFF;
-    }
-    .btn-primary {
-      background: #2563EB;
-      border-color: #1D4ED8;
-    }
-    .btn-primary:hover {
-      background: #1D4ED8;
     }
     .game-container {
       width: 100%;
@@ -175,8 +168,8 @@
     <div class="brand">
       <span class="badge-cpp">C++17</span>
       <div>
-        <h1 class="title">WebAssembly Physics Engine</h1>
-        <p class="subtitle">Compiled via Emscripten • Native SDL2 Graphics & Simulation</p>
+        <h1 class="title">C++ Physics Catapult Game</h1>
+        <p class="subtitle">Emscripten WebAssembly &bull; Vector SVG to PNG Textures &bull; Impulse Rigid Body Dynamics</p>
       </div>
     </div>
     <div class="header-actions">
@@ -188,7 +181,7 @@
     <div class="canvas-wrapper">
       <div id="loading-overlay">
         <div class="spinner"></div>
-        <div class="status-text" id="status">Initializing WebAssembly Engine...</div>
+        <div class="status-text" id="status">Initializing WebAssembly Engine & Decoded PNG Textures...</div>
         <div class="progress-bar-container">
           <div class="progress-bar" id="progress-bar"></div>
         </div>
@@ -198,10 +191,10 @@
 
     <div class="info-bar">
       <div class="info-col">
-        <strong>Levels:</strong> [1] Castle Siege &bull; [2] Bridge Stress &bull; [3] Orbital Slingshot &bull; [4] Ragdoll Pinball &bull; [5] Sandbox Lab
+        <strong>Castle Levels:</strong> [1] Outpost Assault &bull; [2] TNT Munitions Vault &bull; [3] Iron Bastion Keep &bull; [4] Trebuchet Highlands &bull; [5] Royal King's Citadel
       </div>
       <div class="info-col">
-        <strong>Hotkeys:</strong> [1-5] Levels &bull; [R] Reset &bull; [T] Slow-Mo &bull; [G] Gravity &bull; [TAB] Tools &bull; [Space] Detonate
+        <strong>Controls:</strong> [Drag Catapult] Aim & Launch &bull; [Click in Flight / Space] Mid-Air Special Ability &bull; [1-5] Levels &bull; [R] Reset &bull; [T] Slow-Mo
       </div>
     </div>
   </main>

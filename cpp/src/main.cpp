@@ -20,575 +20,552 @@
 #include "../include/PhysicsWorld.h"
 #include "../include/GameLevels.h"
 #include "../include/GameRenderer.h"
+#include "../include/TextureManager.h"
 
 // -------------------------------------------------------------
-// Global Game State
+// Constants & Game State
 // -------------------------------------------------------------
-static SDL_Window* g_window = nullptr;
-static SDL_Renderer* g_renderer = nullptr;
-
 static const int SCREEN_WIDTH = 1060;
 static const int SCREEN_HEIGHT = 680;
 
+static SDL_Window* g_window = nullptr;
+static SDL_Renderer* g_renderer = nullptr;
+
 static PhysicsWorld g_world;
 static int g_currentLevel = 1;
+static LevelInfo g_currentLevelInfo;
 static bool g_isRunning = true;
 
-// Gameplay Stats
-static int g_score = 0;
-static int g_targetsTotal = 0;
-static int g_targetsDestroyed = 0;
-static int g_shotsFired = 0;
-static bool g_levelComplete = false;
+// Gameplay & Slingshot Variables
+static Vector2 g_slingshotPos(180.0f, 490.0f);
+static Vector2 g_leftForkAnchor(168.0f, 458.0f);
+static Vector2 g_rightForkAnchor(192.0f, 458.0f);
 
-// Tool & Interaction Modes
-enum InteractionTool {
-    TOOL_SLINGSHOT = 0,
-    TOOL_DRAG = 1,
-    TOOL_SPAWN = 2,
-    TOOL_EXPLODE = 3
-};
-static InteractionTool g_currentTool = TOOL_SLINGSHOT;
-
-enum AmmoType {
-    AMMO_BOULDER = 0,
-    AMMO_TNT = 1,
-    AMMO_RUBBER = 2,
-    AMMO_CLUSTER = 3
-};
-static AmmoType g_selectedAmmo = AMMO_BOULDER;
-
-enum SpawnItem {
-    SPAWN_WOOD_BOX = 0,
-    SPAWN_STONE_COL = 1,
-    SPAWN_GLASS_PANE = 2,
-    SPAWN_RUBBER_BALL = 3,
-    SPAWN_TNT = 4,
-    SPAWN_RAGDOLL = 5,
-    SPAWN_TRUCK = 6
-};
-static SpawnItem g_selectedSpawnItem = SPAWN_WOOD_BOX;
-
-// Slingshot State
 static bool g_isAiming = false;
-static Vector2 g_aimStart(160, 560);
-static Vector2 g_aimCurrent(160, 560);
+static Vector2 g_aimPos(180.0f, 490.0f);
+static const float MAX_PULL_DISTANCE = 95.0f;
 
-// FPS calculation
+// Projectile Roster Queue
+static std::vector<int> g_ammoQueue;
+static int g_activeBirdType = 0;
+static std::shared_ptr<RigidBody> g_activeFlightBird = nullptr;
+static float g_flightTimer = 0.0f;
+static float g_settleTimer = 0.0f;
+
+// Scoring & Stats
+static int g_score = 0;
+static int g_highScores[6] = { 0, 0, 0, 0, 0, 0 };
+static int g_levelStars[6] = { 0, 0, 0, 0, 0, 0 };
+static bool g_levelWon = false;
+static bool g_levelLost = false;
+static float g_victoryAnimTimer = 0.0f;
+
+// Trajectory Line History
+static std::vector<Vector2> g_lastFlightPath;
+
+// Performance & Slow-Mo
 static uint32_t g_lastTime = 0;
 static int g_fps = 60;
 static int g_frameCount = 0;
 static uint32_t g_fpsTimer = 0;
 
 // -------------------------------------------------------------
-// Level Management
+// Level Loading & Management
 // -------------------------------------------------------------
-static void countTargets() {
-    g_targetsTotal = 0;
-    g_targetsDestroyed = 0;
-    for (const auto& b : g_world.bodies) {
-        if (b->isTarget) {
-            g_targetsTotal++;
-        }
-    }
-}
-
 static void loadLevel(int levelId) {
     g_currentLevel = levelId;
-    g_levelComplete = false;
+    g_currentLevelInfo = GameLevels::getLevelInfo(levelId);
+    g_ammoQueue = g_currentLevelInfo.birdQueue;
+
+    g_levelWon = false;
+    g_levelLost = false;
     g_isAiming = false;
+    g_activeFlightBird = nullptr;
+    g_flightTimer = 0.0f;
+    g_settleTimer = 0.0f;
+    g_victoryAnimTimer = 0.0f;
+    g_lastFlightPath.clear();
+
+    if (!g_ammoQueue.empty()) {
+        g_activeBirdType = g_ammoQueue.front();
+        g_ammoQueue.erase(g_ammoQueue.begin());
+    }
 
     if (levelId == 1) {
         GameLevels::buildLevel1(g_world, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
-        g_world.gravity = Vector2(0, 980.0f);
-        g_aimStart = Vector2(160, 560);
     } else if (levelId == 2) {
         GameLevels::buildLevel2(g_world, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
-        g_world.gravity = Vector2(0, 980.0f);
-        g_aimStart = Vector2(100, 480);
     } else if (levelId == 3) {
         GameLevels::buildLevel3(g_world, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
-        g_world.gravity = Vector2(0, 0.0f); // Zero-G
-        g_aimStart = Vector2(120, (float)SCREEN_HEIGHT * 0.5f);
     } else if (levelId == 4) {
         GameLevels::buildLevel4(g_world, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
-        g_world.gravity = Vector2(0, 980.0f);
-        g_aimStart = Vector2((float)SCREEN_WIDTH * 0.5f, 600);
     } else {
         GameLevels::buildLevel5(g_world, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
-        g_world.gravity = Vector2(0, 980.0f);
-        g_aimStart = Vector2(160, 560);
-    }
-
-    countTargets();
-}
-
-// -------------------------------------------------------------
-// Slingshot Projectile Launcher
-// -------------------------------------------------------------
-static void fireSlingshot(Vector2 start, Vector2 target, AmmoType ammo) {
-    Vector2 dir = start - target;
-    float power = dir.length() * 5.0f;
-    if (power < 15.0f) return;
-    if (power > 3200.0f) power = 3200.0f;
-
-    Vector2 normDir = dir.normalized();
-    Vector2 launchVel = normDir * power;
-    g_shotsFired++;
-
-    if (ammo == AMMO_BOULDER) {
-        auto boulder = g_world.createCircle(BODY_DYNAMIC, MAT_STONE, start, 24.0f);
-        boulder->velocity = launchVel;
-        boulder->mass = 28.0f;
-        boulder->invMass = 1.0f / 28.0f;
-        boulder->color = 0x607D8B;
-    } else if (ammo == AMMO_TNT) {
-        auto bomb = g_world.createCircle(BODY_DYNAMIC, MAT_TNT, start, 22.0f);
-        bomb->velocity = launchVel;
-        bomb->color = 0xE53935;
-    } else if (ammo == AMMO_RUBBER) {
-        auto rubber = g_world.createCircle(BODY_DYNAMIC, MAT_RUBBER, start, 20.0f);
-        rubber->velocity = launchVel;
-        rubber->restitution = 0.95f;
-        rubber->color = 0xFF7043;
-    } else if (ammo == AMMO_CLUSTER) {
-        for (int i = -1; i <= 1; ++i) {
-            Vector2 spreadVel = launchVel.rotate((float)i * 0.14f);
-            auto pellet = g_world.createCircle(BODY_DYNAMIC, MAT_METAL, start + Vector2((float)i * 10.0f, 0.0f), 14.0f);
-            pellet->velocity = spreadVel;
-            pellet->mass = 12.0f;
-            pellet->invMass = 1.0f / 12.0f;
-            pellet->color = 0xFFCA28;
-        }
     }
 }
 
 // -------------------------------------------------------------
-// Mouse & Input Handling
+// Slingshot Launch & Mid-Air Abilities
 // -------------------------------------------------------------
-struct RectButton {
-    int id;
-    int x, y, w, h;
-    std::string text;
-    bool isSelected;
-};
-
-static std::vector<RectButton> g_levelButtons;
-static std::vector<RectButton> g_toolButtons;
-static std::vector<RectButton> g_ammoButtons;
-static std::vector<RectButton> g_spawnButtons;
-
-static void initUIButtons() {
-    g_levelButtons.clear();
-    g_levelButtons.push_back({1, 10, 10, 100, 28, "1: Castle", true});
-    g_levelButtons.push_back({2, 115, 10, 100, 28, "2: Bridge", false});
-    g_levelButtons.push_back({3, 220, 10, 100, 28, "3: Orbit", false});
-    g_levelButtons.push_back({4, 325, 10, 100, 28, "4: Ragdoll", false});
-    g_levelButtons.push_back({5, 430, 10, 100, 28, "5: Sandbox", false});
-    g_levelButtons.push_back({99, 535, 10, 70, 28, "Reset", false});
-
-    g_toolButtons.clear();
-    g_toolButtons.push_back({0, 10, 44, 90, 24, "Slingshot", true});
-    g_toolButtons.push_back({1, 105, 44, 75, 24, "Grab/Drag", false});
-    g_toolButtons.push_back({2, 185, 44, 60, 24, "Spawn", false});
-    g_toolButtons.push_back({3, 250, 44, 65, 24, "Explode", false});
-
-    g_ammoButtons.clear();
-    g_ammoButtons.push_back({0, 330, 44, 60, 24, "Boulder", true});
-    g_ammoButtons.push_back({1, 395, 44, 50, 24, "TNT", false});
-    g_ammoButtons.push_back({2, 450, 44, 60, 24, "Rubber", false});
-    g_ammoButtons.push_back({3, 515, 44, 60, 24, "Cluster", false});
-
-    g_spawnButtons.clear();
-    g_spawnButtons.push_back({0, 330, 44, 55, 24, "Box", true});
-    g_spawnButtons.push_back({1, 390, 44, 55, 24, "Stone", false});
-    g_spawnButtons.push_back({2, 450, 44, 55, 24, "Glass", false});
-    g_spawnButtons.push_back({3, 510, 44, 55, 24, "Ball", false});
-    g_spawnButtons.push_back({4, 570, 44, 50, 24, "TNT", false});
-    g_spawnButtons.push_back({5, 625, 44, 65, 24, "Ragdoll", false});
-    g_spawnButtons.push_back({6, 695, 44, 55, 24, "Truck", false});
-}
-
-static bool checkButtonClick(const std::vector<RectButton>& buttons, int mx, int my, int& outId) {
-    for (const auto& btn : buttons) {
-        if (mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h) {
-            outId = btn.id;
-            return true;
-        }
-    }
-    return false;
-}
-
-static void handleMouseDown(int mx, int my, int button) {
-    int clickedId = -1;
-
-    // Check Level Buttons
-    if (checkButtonClick(g_levelButtons, mx, my, clickedId)) {
-        if (clickedId == 99) {
-            loadLevel(g_currentLevel);
-        } else {
-            loadLevel(clickedId);
-            for (auto& btn : g_levelButtons) {
-                btn.isSelected = (btn.id == clickedId);
-            }
-        }
-        return;
-    }
-
-    // Check Tool Buttons
-    if (checkButtonClick(g_toolButtons, mx, my, clickedId)) {
-        g_currentTool = (InteractionTool)clickedId;
-        for (auto& btn : g_toolButtons) {
-            btn.isSelected = (btn.id == clickedId);
-        }
-        return;
-    }
-
-    // Check Ammo Buttons (when in slingshot mode)
-    if (g_currentTool == TOOL_SLINGSHOT) {
-        if (checkButtonClick(g_ammoButtons, mx, my, clickedId)) {
-            g_selectedAmmo = (AmmoType)clickedId;
-            for (auto& btn : g_ammoButtons) {
-                btn.isSelected = (btn.id == clickedId);
-            }
-            return;
-        }
-    }
-
-    // Check Spawn Buttons (when in spawn mode)
-    if (g_currentTool == TOOL_SPAWN) {
-        if (checkButtonClick(g_spawnButtons, mx, my, clickedId)) {
-            g_selectedSpawnItem = (SpawnItem)clickedId;
-            for (auto& btn : g_spawnButtons) {
-                btn.isSelected = (btn.id == clickedId);
-            }
-            return;
-        }
-    }
-
-    // Ignore clicks in UI header bar
-    if (my < 75) return;
-
-    Vector2 mousePos((float)mx, (float)my);
-
-    if (g_currentTool == TOOL_SLINGSHOT) {
-        g_isAiming = true;
-        g_aimCurrent = mousePos;
-    } else if (g_currentTool == TOOL_DRAG) {
-        g_world.startDrag((float)mx, (float)my);
-    } else if (g_currentTool == TOOL_EXPLODE) {
-        g_world.applyExplosion(mousePos, 200.0f, 2400.0f, 200.0f);
-    } else if (g_currentTool == TOOL_SPAWN) {
-        if (g_selectedSpawnItem == SPAWN_WOOD_BOX) {
-            g_world.createBox(BODY_DYNAMIC, MAT_WOOD, mousePos, 40.0f, 40.0f);
-        } else if (g_selectedSpawnItem == SPAWN_STONE_COL) {
-            g_world.createBox(BODY_DYNAMIC, MAT_STONE, mousePos, 35.0f, 75.0f);
-        } else if (g_selectedSpawnItem == SPAWN_GLASS_PANE) {
-            g_world.createBox(BODY_DYNAMIC, MAT_GLASS, mousePos, 20.0f, 80.0f);
-        } else if (g_selectedSpawnItem == SPAWN_RUBBER_BALL) {
-            g_world.createCircle(BODY_DYNAMIC, MAT_RUBBER, mousePos, 20.0f);
-        } else if (g_selectedSpawnItem == SPAWN_TNT) {
-            g_world.createBox(BODY_DYNAMIC, MAT_TNT, mousePos, 38.0f, 38.0f);
-        } else if (g_selectedSpawnItem == SPAWN_RAGDOLL) {
-            GameLevels::spawnRagdoll(g_world, mousePos.x, mousePos.y, 0.9f);
-        } else if (g_selectedSpawnItem == SPAWN_TRUCK) {
-            GameLevels::spawnVehicle(g_world, mousePos.x, mousePos.y, 10.0f);
-        }
+static std::string getBirdTextureKey(int birdType) {
+    switch (birdType) {
+        case 0: return "projectile_red";
+        case 1: return "projectile_bomb";
+        case 2: return "projectile_split";
+        case 3: return "projectile_drill";
+        case 4: return "projectile_rubber";
+        default: return "projectile_red";
     }
 }
 
-static void handleMouseMove(int mx, int my) {
-    Vector2 mousePos((float)mx, (float)my);
-    if (g_isAiming) {
-        g_aimCurrent = mousePos;
-    }
-    if (g_world.isDragging) {
-        g_world.updateDrag((float)mx, (float)my);
-    }
-}
-
-static void handleMouseUp(int mx, int my, int button) {
-    if (g_isAiming && g_currentTool == TOOL_SLINGSHOT) {
+static void launchBird() {
+    Vector2 pullOffset = g_slingshotPos - g_aimPos;
+    float pullDist = pullOffset.length();
+    if (pullDist < 12.0f) {
         g_isAiming = false;
-        Vector2 mousePos((float)mx, (float)my);
-        fireSlingshot(g_aimStart, mousePos, g_selectedAmmo);
+        return;
     }
-    if (g_world.isDragging) {
-        g_world.endDrag();
+
+    float powerMultiplier = 14.5f;
+    Vector2 launchVelocity = pullOffset * powerMultiplier;
+
+    // Create active flight bird
+    auto bird = g_world.createCircle(BODY_DYNAMIC, MAT_PROJECTILE, g_slingshotPos, 22.0f);
+    bird->velocity = launchVelocity;
+    bird->projectileType = g_activeBirdType;
+    bird->textureKey = getBirdTextureKey(g_activeBirdType);
+    bird->isArmed = true;
+
+    if (g_activeBirdType == 0) { // Red Striker
+        bird->mass = 4.5f;
+        bird->invMass = 1.0f / 4.5f;
+    } else if (g_activeBirdType == 1) { // Bombardier
+        bird->mass = 5.5f;
+        bird->invMass = 1.0f / 5.5f;
+    } else if (g_activeBirdType == 2) { // Tri-Splitter
+        bird->mass = 2.8f;
+        bird->invMass = 1.0f / 2.8f;
+    } else if (g_activeBirdType == 3) { // Iron Drill
+        bird->mass = 7.0f;
+        bird->invMass = 1.0f / 7.0f;
+    } else if (g_activeBirdType == 4) { // Rubber
+        bird->mass = 3.5f;
+        bird->restitution = 0.92f;
     }
+
+    g_activeFlightBird = bird;
+    g_flightTimer = 0.0f;
+    g_settleTimer = 0.0f;
+    g_isAiming = false;
+    g_lastFlightPath.clear();
+    g_lastFlightPath.push_back(g_slingshotPos);
+
+    // Muzzle dust/smoke puff
+    g_world.particleSystem.emitDebris(g_slingshotPos, 0x8D6E63, 10);
 }
 
-static void handleKeyDown(SDL_Keycode key) {
-    if (key >= SDLK_1 && key <= SDLK_5) {
-        int lvl = key - SDLK_1 + 1;
-        loadLevel(lvl);
-        for (auto& btn : g_levelButtons) {
-            btn.isSelected = (btn.id == lvl);
-        }
-    } else if (key == SDLK_r) {
-        loadLevel(g_currentLevel);
-    } else if (key == SDLK_t) {
-        // Toggle slow motion
-        g_world.timeScale = (g_world.timeScale == 1.0f) ? 0.25f : 1.0f;
-    } else if (key == SDLK_g) {
-        // Cycle gravity
-        if (g_world.gravity.y == 980.0f) g_world.gravity.y = 0.0f;
-        else if (g_world.gravity.y == 0.0f) g_world.gravity.y = 160.0f;
-        else g_world.gravity.y = 980.0f;
-    } else if (key == SDLK_TAB) {
-        int nextTool = (g_currentTool + 1) % 4;
-        g_currentTool = (InteractionTool)nextTool;
-        for (auto& btn : g_toolButtons) {
-            btn.isSelected = (btn.id == nextTool);
-        }
-    } else if (key == SDLK_SPACE) {
-        // Detonate first TNT
-        for (auto& b : g_world.bodies) {
-            if (b->material == MAT_TNT && !b->isDead) {
-                b->takeDamage(1000.0f);
-                break;
-            }
-        }
+static void triggerBirdAbility() {
+    if (!g_activeFlightBird || g_activeFlightBird->isDead || g_activeFlightBird->abilityUsed) return;
+    g_activeFlightBird->abilityUsed = true;
+
+    int type = g_activeFlightBird->projectileType;
+    Vector2 pos = g_activeFlightBird->position;
+    Vector2 vel = g_activeFlightBird->velocity;
+
+    if (type == 0) {
+        // Red Striker: Kinetic forward battle cry boost
+        g_activeFlightBird->velocity = vel.normalized() * (vel.length() + 350.0f);
+        g_world.particleSystem.emitExplosion(pos, 15);
+        g_world.addScorePopup(pos, "WAR CRY!", 0xFF5252, 1.8f);
+    } else if (type == 1) {
+        // Bombardier: Instant detonating shockwave!
+        g_world.applyExplosion(pos, 250.0f, 3800.0f, 380.0f);
+        g_activeFlightBird->isDead = true;
+    } else if (type == 2) {
+        // Tri-Splitter: Splits into 3 swift projectiles
+        g_world.addScorePopup(pos, "TRIPLE SPLIT!", 0x0288D1, 1.8f);
+        g_world.particleSystem.emitExplosion(pos, 15);
+
+        float currentSpeed = std::max(vel.length(), 400.0f);
+        float baseAngle = std::atan2(vel.y, vel.x);
+
+        // Projectile 1 (High +15 deg)
+        auto b1 = g_world.createCircle(BODY_DYNAMIC, MAT_PROJECTILE, pos + Vector2(0, -10), 16.0f);
+        b1->projectileType = 2;
+        b1->textureKey = "projectile_split";
+        b1->velocity = Vector2(std::cos(baseAngle - 0.26f), std::sin(baseAngle - 0.26f)) * currentSpeed;
+        b1->abilityUsed = true;
+
+        // Projectile 2 (Low -15 deg)
+        auto b2 = g_world.createCircle(BODY_DYNAMIC, MAT_PROJECTILE, pos + Vector2(0, 10), 16.0f);
+        b2->projectileType = 2;
+        b2->textureKey = "projectile_split";
+        b2->velocity = Vector2(std::cos(baseAngle + 0.26f), std::sin(baseAngle + 0.26f)) * currentSpeed;
+        b2->abilityUsed = true;
+
+        // Main projectile stays center
+        g_activeFlightBird->radius = 16.0f;
+    } else if (type == 3) {
+        // Iron Drill: Supersonic thruster boost
+        g_activeFlightBird->velocity = vel.normalized() * (vel.length() * 2.2f + 500.0f);
+        g_world.addScorePopup(pos, "DRILL HYPER DRIVE!", 0x00E676, 2.0f);
+        g_world.particleSystem.emitExplosion(pos, 25);
+    } else if (type == 4) {
+        // Rubber Ricochet: Mega slam bounce
+        g_activeFlightBird->velocity = Vector2(vel.x * 1.3f, 600.0f);
+        g_world.addScorePopup(pos, "SUPER BOUNCE!", 0xFF4081, 1.8f);
+        g_world.particleSystem.emitExplosion(pos, 15);
     }
 }
 
 // -------------------------------------------------------------
-// Rendering Loop
+// Trajectory Arc Prediction
 // -------------------------------------------------------------
-static void renderFrame() {
-    // 1. Clear background
-    if (g_currentLevel == 3) {
-        SDL_SetRenderDrawColor(g_renderer, 8, 10, 18, 255); // Deep space
-    } else {
-        SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 255); // Slate 900
-    }
-    SDL_RenderClear(g_renderer);
+static void renderTrajectoryPrediction() {
+    if (!g_isAiming) return;
 
-    // 2. Subtle grid lines
-    SDL_SetRenderDrawColor(g_renderer, 30, 41, 59, 255);
-    const int gridSize = 40;
-    for (int x = 0; x < SCREEN_WIDTH; x += gridSize) {
-        SDL_RenderDrawLine(g_renderer, x, 75, x, SCREEN_HEIGHT);
-    }
-    for (int y = 80; y < SCREEN_HEIGHT; y += gridSize) {
-        SDL_RenderDrawLine(g_renderer, 0, y, SCREEN_WIDTH, y);
-    }
+    Vector2 pullOffset = g_slingshotPos - g_aimPos;
+    float pullDist = pullOffset.length();
+    if (pullDist < 10.0f) return;
 
-    // 3. Gravity Wells / Orbits (Level 3)
-    for (const auto& gw : g_world.gravityWells) {
-        SDL_Color auraColor = gw.isBlackHole ? SDL_Color{168, 85, 247, 80} : SDL_Color{56, 189, 248, 80};
-        GameRenderer::drawCircleOutline(g_renderer, (int)gw.position.x, (int)gw.position.y, (int)gw.radius, auraColor);
-        GameRenderer::drawCircleOutline(g_renderer, (int)gw.position.x, (int)gw.position.y, (int)(gw.radius * 0.5f), auraColor);
-    }
+    Vector2 simPos = g_slingshotPos;
+    Vector2 simVel = pullOffset * 14.5f;
+    Vector2 gravity = g_world.gravity;
+    float simDt = 0.035f;
 
-    // 4. Constraints / Springs
-    for (const auto& c : g_world.constraints) {
-        if (c->isBroken) continue;
-        Vector2 pA = c->getWorldAnchorA();
-        Vector2 pB = c->getWorldAnchorB();
+    for (int step = 0; step < 26; ++step) {
+        simVel += gravity * simDt;
+        simPos += simVel * simDt;
 
-        // Stress heat color: Green -> Yellow -> Red
-        SDL_Color lineColor = {148, 163, 184, 255};
-        if (c->currentStress > 0.05f) {
-            uint8_t r = (uint8_t)std::min(255.0f, c->currentStress * 255.0f);
-            uint8_t g = (uint8_t)std::max(0.0f, (1.0f - c->currentStress) * 220.0f);
-            lineColor = {r, g, 80, 255};
+        if (simPos.y > (float)SCREEN_HEIGHT - 35.0f || simPos.x > (float)SCREEN_WIDTH) break;
+
+        // Draw glowing gradient trajectory dot
+        float dotRadius = 4.5f - (step * 0.12f);
+        if (dotRadius < 1.8f) dotRadius = 1.8f;
+
+        SDL_Color dotCol = { 255, 235, 59, (Uint8)(255 - step * 8) };
+        if (step % 2 == 0) {
+            dotCol = { 255, 112, 67, (Uint8)(255 - step * 8) };
         }
+        GameRenderer::drawFilledCircle(g_renderer, (int)simPos.x, (int)simPos.y, (int)dotRadius, dotCol);
+    }
+}
 
-        SDL_SetRenderDrawColor(g_renderer, lineColor.r, lineColor.g, lineColor.b, 255);
-        SDL_RenderDrawLine(g_renderer, (int)pA.x, (int)pA.y, (int)pB.x, (int)pB.y);
+// -------------------------------------------------------------
+// Slingshot Render (Front/Back Forks, Rubber Bands & Pouch)
+// -------------------------------------------------------------
+static void renderSlingshot() {
+    auto& tm = TextureManager::getInstance();
 
-        // Joints
-        GameRenderer::drawFilledCircle(g_renderer, (int)pA.x, (int)pA.y, 3, {203, 213, 225, 255});
-        GameRenderer::drawFilledCircle(g_renderer, (int)pB.x, (int)pB.y, 3, {203, 213, 225, 255});
+    Vector2 pouchPos = g_isAiming ? g_aimPos : g_slingshotPos;
+
+    // Back Fork
+    tm.draw("catapult_fork_front", g_slingshotPos.x, g_slingshotPos.y + 10.0f, 44.0f, 90.0f);
+
+    // Left & Right Rubber Tension Bands
+    SDL_SetRenderDrawColor(g_renderer, 62, 39, 35, 255);
+    for (int offset = -2; offset <= 2; ++offset) {
+        SDL_RenderDrawLine(g_renderer, (int)g_leftForkAnchor.x + offset, (int)g_leftForkAnchor.y, (int)pouchPos.x - 12 + offset, (int)pouchPos.y);
+        SDL_RenderDrawLine(g_renderer, (int)g_rightForkAnchor.x + offset, (int)g_rightForkAnchor.y, (int)pouchPos.x + 12 + offset, (int)pouchPos.y);
     }
 
-    // 5. Mouse Drag Line
-    if (g_world.isDragging && g_world.draggedBodyId != -1) {
-        for (const auto& b : g_world.bodies) {
-            if (b->id == g_world.draggedBodyId) {
-                Vector2 anchor = b->position + g_world.dragLocalAnchor.rotate(b->angle);
-                SDL_SetRenderDrawColor(g_renderer, 6, 182, 212, 255); // Cyan
-                SDL_RenderDrawLine(g_renderer, (int)anchor.x, (int)anchor.y, (int)g_world.dragTargetPos.x, (int)g_world.dragTargetPos.y);
-                GameRenderer::drawFilledCircle(g_renderer, (int)anchor.x, (int)anchor.y, 4, {6, 182, 212, 255});
-                break;
-            }
+    // Slingshot Leather Pouch
+    tm.draw("slingshot_pouch", pouchPos.x, pouchPos.y, 34.0f, 34.0f);
+
+    // Active Ready Bird inside pouch
+    if (!g_activeFlightBird && g_ammoQueue.size() >= 0) {
+        std::string birdTex = getBirdTextureKey(g_activeBirdType);
+        tm.draw(birdTex, pouchPos.x, pouchPos.y, 44.0f, 44.0f);
+    }
+
+    // Ammunition Queue standing on ground
+    float qx = 100.0f;
+    float qy = (float)SCREEN_HEIGHT - 65.0f;
+    for (size_t i = 0; i < g_ammoQueue.size(); ++i) {
+        std::string waitingTex = getBirdTextureKey(g_ammoQueue[i]);
+        tm.draw(waitingTex, qx - i * 36.0f, qy, 34.0f, 34.0f);
+    }
+}
+
+// -------------------------------------------------------------
+// Game Render Loop
+// -------------------------------------------------------------
+static void renderGame() {
+    auto& tm = TextureManager::getInstance();
+
+    // 1. Background Sky & Scenery
+    tm.drawTopLeft("background_sky", 0, 0, (float)SCREEN_WIDTH, (float)SCREEN_HEIGHT);
+
+    // 2. Trajectory Flight History Line
+    if (g_lastFlightPath.size() > 1) {
+        SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 70);
+        for (size_t i = 1; i < g_lastFlightPath.size(); ++i) {
+            SDL_RenderDrawLine(g_renderer, (int)g_lastFlightPath[i - 1].x, (int)g_lastFlightPath[i - 1].y,
+                                           (int)g_lastFlightPath[i].x, (int)g_lastFlightPath[i].y);
         }
     }
 
-    // 6. Rigid Bodies
+    // 3. Aiming Trajectory Dots
+    renderTrajectoryPrediction();
+
+    // 4. Slingshot Base & Rubber Bands
+    renderSlingshot();
+
+    // 5. Render Physics Rigid Bodies with SVG-Converted Textures
     for (const auto& b : g_world.bodies) {
         if (b->isDead) continue;
-        SDL_Color bodyColor = GameRenderer::hexToSDL(b->color);
-        SDL_Color outlineColor = {255, 255, 255, 120};
 
-        if (b->shapeType == SHAPE_CIRCLE) {
-            GameRenderer::drawFilledCircle(g_renderer, (int)b->position.x, (int)b->position.y, (int)b->radius, bodyColor);
-            GameRenderer::drawCircleOutline(g_renderer, (int)b->position.x, (int)b->position.y, (int)b->radius, outlineColor);
-
-            // Orientation line
-            Vector2 orient = b->position + Vector2(std::cos(b->angle), std::sin(b->angle)) * (b->radius * 0.8f);
-            SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 150);
-            SDL_RenderDrawLine(g_renderer, (int)b->position.x, (int)b->position.y, (int)orient.x, (int)orient.y);
-
-            // Target Bulls-eye pattern
-            if (b->isTarget) {
-                GameRenderer::drawFilledCircle(g_renderer, (int)b->position.x, (int)b->position.y, (int)(b->radius * 0.6f), {255, 255, 255, 255});
-                GameRenderer::drawFilledCircle(g_renderer, (int)b->position.x, (int)b->position.y, (int)(b->radius * 0.3f), {239, 68, 68, 255});
+        if (!b->textureKey.empty()) {
+            if (b->shapeType == SHAPE_CIRCLE) {
+                tm.draw(b->textureKey, b->position.x, b->position.y, b->radius * 2.0f, b->radius * 2.0f, b->angle);
+            } else {
+                tm.draw(b->textureKey, b->position.x, b->position.y, b->width, b->height, b->angle);
             }
         } else {
-            // Polygons & Boxes
-            GameRenderer::drawPolygon(g_renderer, b->worldVertices, bodyColor, outlineColor);
+            // Fallback rasterization
+            SDL_Color fillColor = GameRenderer::hexToSDL(b->color);
+            SDL_Color outlineColor = { 33, 33, 33, 255 };
 
-            // TNT Box Label
-            if (b->material == MAT_TNT) {
-                GameRenderer::drawText(g_renderer, "TNT", (int)b->position.x - 9, (int)b->position.y - 4, 1, {255, 255, 255, 255});
+            if (b->shapeType == SHAPE_CIRCLE) {
+                GameRenderer::drawFilledCircle(g_renderer, (int)b->position.x, (int)b->position.y, (int)b->radius, fillColor);
+                GameRenderer::drawCircleOutline(g_renderer, (int)b->position.x, (int)b->position.y, (int)b->radius, outlineColor);
+            } else {
+                GameRenderer::drawPolygon(g_renderer, b->worldVertices, fillColor, outlineColor);
             }
+        }
+
+        // Damage flash highlight
+        if (b->damageFlash > 0.0f && b->bodyType == BODY_DYNAMIC) {
+            GameRenderer::drawFilledCircle(g_renderer, (int)b->position.x, (int)b->position.y, (int)(b->radius * 0.6f), { 255, 255, 255, 140 });
         }
     }
 
-    // 7. Particles
+    // 6. Constraints / Joints
+    for (const auto& c : g_world.constraints) {
+        if (!c->isActive || !c->bodyA || !c->bodyB) continue;
+        Vector2 pA = c->getWorldAnchorA();
+        Vector2 pB = c->getWorldAnchorB();
+        SDL_SetRenderDrawColor(g_renderer, 84, 110, 122, 220);
+        SDL_RenderDrawLine(g_renderer, (int)pA.x, (int)pA.y, (int)pB.x, (int)pB.y);
+    }
+
+    // 7. Particles (Explosions, Smoke, Sparks, Stars)
     for (const auto& p : g_world.particleSystem.particles) {
-        if (p.life <= 0) continue;
-        SDL_Color pColor = GameRenderer::hexToSDL(p.color);
-        SDL_SetRenderDrawColor(g_renderer, pColor.r, pColor.g, pColor.b, 255);
-        SDL_Rect pRect = { (int)(p.position.x - p.size * 0.5f), (int)(p.position.y - p.size * 0.5f), (int)p.size, (int)p.size };
-        SDL_RenderFillRect(g_renderer, &pRect);
-    }
+        float alphaNorm = (p.life / p.maxLife);
+        uint8_t alpha = (uint8_t)(alphaNorm * 255);
 
-    // 8. Slingshot Rubber Band & Trajectory Arc
-    if (g_isAiming && g_currentTool == TOOL_SLINGSHOT) {
-        // Elastic bands
-        SDL_SetRenderDrawColor(g_renderer, 249, 115, 22, 255); // Orange
-        SDL_RenderDrawLine(g_renderer, (int)g_aimStart.x - 12, (int)g_aimStart.y - 15, (int)g_aimCurrent.x, (int)g_aimCurrent.y);
-        SDL_RenderDrawLine(g_renderer, (int)g_aimStart.x + 12, (int)g_aimStart.y - 15, (int)g_aimCurrent.x, (int)g_aimCurrent.y);
-
-        // Loaded Projectile
-        SDL_Color ammoColors[4] = {{96, 125, 139, 255}, {229, 57, 53, 255}, {255, 112, 67, 255}, {255, 202, 40, 255}};
-        GameRenderer::drawFilledCircle(g_renderer, (int)g_aimCurrent.x, (int)g_aimCurrent.y, 14, ammoColors[g_selectedAmmo]);
-        GameRenderer::drawCircleOutline(g_renderer, (int)g_aimCurrent.x, (int)g_aimCurrent.y, 14, {255, 255, 255, 255});
-
-        // Parabolic trajectory preview
-        Vector2 launchVec = (g_aimStart - g_aimCurrent) * 5.0f;
-        float gravY = (g_currentLevel == 3) ? 0.0f : g_world.gravity.y;
-
-        for (int i = 1; i <= 24; ++i) {
-            float t = (float)i * 0.045f;
-            float px = g_aimStart.x + launchVec.x * t;
-            float py = g_aimStart.y + launchVec.y * t + 0.5f * gravY * t * t;
-            if (px > SCREEN_WIDTH || py > SCREEN_HEIGHT || px < 0) break;
-            GameRenderer::drawFilledCircle(g_renderer, (int)px, (int)py, std::max(2, 5 - i / 5), {249, 115, 22, 180});
-        }
-    }
-
-    // ---------------------------------------------------------
-    // 9. In-Game GUI Header & Toolbar
-    // ---------------------------------------------------------
-    // Top Bar Background
-    SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 255);
-    SDL_Rect headerRect = {0, 0, SCREEN_WIDTH, 72};
-    SDL_RenderFillRect(g_renderer, &headerRect);
-    SDL_SetRenderDrawColor(g_renderer, 51, 65, 85, 255);
-    SDL_RenderDrawLine(g_renderer, 0, 72, SCREEN_WIDTH, 72);
-
-    // Draw Level Buttons
-    for (const auto& btn : g_levelButtons) {
-        SDL_Rect r = { btn.x, btn.y, btn.w, btn.h };
-        if (btn.isSelected) {
-            SDL_SetRenderDrawColor(g_renderer, 37, 99, 235, 255); // Blue 600
+        if (p.type == 2) { // Explosion Fireball
+            tm.draw("vfx_explosion", p.position.x, p.position.y, p.size * 3.0f, p.size * 3.0f, 0.0f, alpha);
+        } else if (p.type == 1) { // Smoke
+            tm.draw("vfx_smoke", p.position.x, p.position.y, p.size * 2.5f, p.size * 2.5f, 0.0f, (uint8_t)(alpha * 0.7f));
         } else {
-            SDL_SetRenderDrawColor(g_renderer, 30, 41, 59, 255); // Slate 800
+            SDL_Color col = GameRenderer::hexToSDL(p.color);
+            col.a = alpha;
+            GameRenderer::drawFilledCircle(g_renderer, (int)p.position.x, (int)p.position.y, (int)p.size, col);
         }
-        SDL_RenderFillRect(g_renderer, &r);
-        SDL_SetRenderDrawColor(g_renderer, 71, 85, 105, 255);
-        SDL_RenderDrawRect(g_renderer, &r);
-
-        GameRenderer::drawText(g_renderer, btn.text, btn.x + 8, btn.y + 10, 1, {255, 255, 255, 255});
     }
 
-    // Draw Tool Buttons
-    for (const auto& btn : g_toolButtons) {
-        SDL_Rect r = { btn.x, btn.y, btn.w, btn.h };
-        if (btn.isSelected) {
-            SDL_SetRenderDrawColor(g_renderer, 234, 88, 12, 255); // Orange 600
+    // 8. Floating Score Popups
+    for (const auto& sp : g_world.scorePopups) {
+        float alphaNorm = (sp.life / sp.maxLife);
+        SDL_Color col = GameRenderer::hexToSDL(sp.color);
+        col.a = (uint8_t)(alphaNorm * 255);
+        GameRenderer::drawText(g_renderer, sp.text, (int)sp.position.x, (int)sp.position.y, (int)sp.scale, col);
+    }
+
+    // -------------------------------------------------------------
+    // HUD & UI Top Header Bar
+    // -------------------------------------------------------------
+    // Top banner backdrop
+    SDL_Rect hudRect = { 0, 0, SCREEN_WIDTH, 64 };
+    SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 225);
+    SDL_RenderFillRect(g_renderer, &hudRect);
+
+    SDL_SetRenderDrawColor(g_renderer, 245, 158, 11, 255);
+    SDL_RenderDrawLine(g_renderer, 0, 64, SCREEN_WIDTH, 64);
+
+    // Level Title & Description
+    std::string titleStr = "LEVEL " + std::to_string(g_currentLevel) + ": " + g_currentLevelInfo.name;
+    GameRenderer::drawText(g_renderer, titleStr, 20, 16, 2, { 254, 240, 138, 255 });
+    GameRenderer::drawText(g_renderer, g_currentLevelInfo.description, 20, 42, 1, { 203, 213, 225, 255 });
+
+    // Score & Targets
+    std::string scoreStr = "SCORE: " + std::to_string(g_world.totalScore);
+    GameRenderer::drawText(g_renderer, scoreStr, 400, 18, 2, { 255, 255, 255, 255 });
+
+    std::string targetStr = "TARGETS: " + std::to_string(g_world.targetsRemaining) + " / " + std::to_string(g_world.totalTargets);
+    SDL_Color targetCol = (g_world.targetsRemaining == 0) ? SDL_Color{ 118, 255, 3, 255 } : SDL_Color{ 255, 82, 82, 255 };
+    GameRenderer::drawText(g_renderer, targetStr, 400, 42, 1, targetCol);
+
+    // Quick Level Select Buttons [1] [2] [3] [4] [5]
+    GameRenderer::drawText(g_renderer, "LEVELS:", 680, 24, 1, { 148, 163, 184, 255 });
+    for (int lvl = 1; lvl <= 5; ++lvl) {
+        SDL_Rect btnRect = { 740 + (lvl - 1) * 36, 16, 28, 28 };
+        if (lvl == g_currentLevel) {
+            SDL_SetRenderDrawColor(g_renderer, 245, 158, 11, 255);
         } else {
-            SDL_SetRenderDrawColor(g_renderer, 30, 41, 59, 255);
+            SDL_SetRenderDrawColor(g_renderer, 51, 65, 85, 255);
         }
-        SDL_RenderFillRect(g_renderer, &r);
+        SDL_RenderFillRect(g_renderer, &btnRect);
+        SDL_SetRenderDrawColor(g_renderer, 255, 255, 255, 200);
+        SDL_RenderDrawRect(g_renderer, &btnRect);
+
+        std::string num = std::to_string(lvl);
+        SDL_Color txtCol = (lvl == g_currentLevel) ? SDL_Color{ 15, 23, 42, 255 } : SDL_Color{ 255, 255, 255, 255 };
+        GameRenderer::drawText(g_renderer, num, btnRect.x + 8, btnRect.y + 6, 2, txtCol);
+    }
+
+    // Reset & Slow-Mo Indicators
+    GameRenderer::drawText(g_renderer, "[R] RESET", 940, 16, 1, { 226, 232, 240, 255 });
+    std::string slowMoTxt = (g_world.timeScale < 1.0f) ? "[T] SLOW-MO: ON" : "[T] SLOW-MO";
+    SDL_Color slowCol = (g_world.timeScale < 1.0f) ? SDL_Color{ 0, 230, 118, 255 } : SDL_Color{ 148, 163, 184, 255 };
+    GameRenderer::drawText(g_renderer, slowMoTxt, 940, 36, 1, slowCol);
+
+    // In-Flight Special Ability Banner Hint
+    if (g_activeFlightBird && !g_activeFlightBird->isDead && !g_activeFlightBird->abilityUsed) {
+        SDL_Rect tipRect = { SCREEN_WIDTH / 2 - 200, 80, 400, 32 };
+        SDL_SetRenderDrawColor(g_renderer, 220, 38, 38, 230);
+        SDL_RenderFillRect(g_renderer, &tipRect);
+        SDL_SetRenderDrawColor(g_renderer, 254, 240, 138, 255);
+        SDL_RenderDrawRect(g_renderer, &tipRect);
+
+        std::string abilityHint = "CLICK / SPACE TO ACTIVATE ABILITY!";
+        if (g_activeBirdType == 1) abilityHint = "CLICK / SPACE TO DETONATE BOMB!";
+        if (g_activeBirdType == 2) abilityHint = "CLICK / SPACE TO TRIPLE SPLIT!";
+        if (g_activeBirdType == 3) abilityHint = "CLICK / SPACE TO DRILL THRUST!";
+        if (g_activeBirdType == 4) abilityHint = "CLICK / SPACE TO SLAM BOUNCE!";
+
+        GameRenderer::drawText(g_renderer, abilityHint, tipRect.x + 24, tipRect.y + 9, 1, { 255, 255, 255, 255 });
+    }
+
+    // -------------------------------------------------------------
+    // Victory & Defeat Overlays
+    // -------------------------------------------------------------
+    if (g_levelWon) {
+        g_victoryAnimTimer += 0.016f;
+
+        SDL_Rect modalRect = { SCREEN_WIDTH / 2 - 250, SCREEN_HEIGHT / 2 - 160, 500, 320 };
+        SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 240);
+        SDL_RenderFillRect(g_renderer, &modalRect);
+        SDL_SetRenderDrawColor(g_renderer, 245, 158, 11, 255);
+        SDL_RenderDrawRect(g_renderer, &modalRect);
+
+        GameRenderer::drawText(g_renderer, "VICTORY! LEVEL CLEARED", modalRect.x + 60, modalRect.y + 35, 2, { 254, 240, 138, 255 });
+
+        // Draw 3 Animated Stars
+        int starCount = 1;
+        if (g_world.totalScore > g_currentLevelInfo.targetScoreGoal * 0.6f) starCount = 2;
+        if (g_world.totalScore >= g_currentLevelInfo.targetScoreGoal) starCount = 3;
+
+        for (int s = 0; s < 3; ++s) {
+            float starX = modalRect.x + 160 + s * 90;
+            float starY = modalRect.y + 115;
+            if (s < starCount && g_victoryAnimTimer > (0.3f + s * 0.3f)) {
+                tm.draw("vfx_star", starX, starY, 64.0f, 64.0f);
+            } else {
+                GameRenderer::drawFilledCircle(g_renderer, (int)starX, (int)starY, 18, { 71, 85, 105, 255 });
+            }
+        }
+
+        std::string finalScoreStr = "FINAL SCORE: " + std::to_string(g_world.totalScore);
+        GameRenderer::drawText(g_renderer, finalScoreStr, modalRect.x + 120, modalRect.y + 175, 2, { 255, 255, 255, 255 });
+
+        // Next Level Button
+        SDL_Rect nextBtn = { modalRect.x + 80, modalRect.y + 225, 150, 48 };
+        SDL_SetRenderDrawColor(g_renderer, 16, 185, 129, 255);
+        SDL_RenderFillRect(g_renderer, &nextBtn);
+        GameRenderer::drawText(g_renderer, "NEXT LEVEL", nextBtn.x + 20, nextBtn.y + 16, 1, { 255, 255, 255, 255 });
+
+        // Replay Button
+        SDL_Rect repBtn = { modalRect.x + 270, modalRect.y + 225, 150, 48 };
         SDL_SetRenderDrawColor(g_renderer, 71, 85, 105, 255);
-        SDL_RenderDrawRect(g_renderer, &r);
+        SDL_RenderFillRect(g_renderer, &repBtn);
+        GameRenderer::drawText(g_renderer, "REPLAY [R]", repBtn.x + 28, repBtn.y + 16, 1, { 255, 255, 255, 255 });
+    } else if (g_levelLost) {
+        SDL_Rect modalRect = { SCREEN_WIDTH / 2 - 220, SCREEN_HEIGHT / 2 - 120, 440, 240 };
+        SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 240);
+        SDL_RenderFillRect(g_renderer, &modalRect);
+        SDL_SetRenderDrawColor(g_renderer, 239, 68, 68, 255);
+        SDL_RenderDrawRect(g_renderer, &modalRect);
 
-        GameRenderer::drawText(g_renderer, btn.text, btn.x + 6, btn.y + 8, 1, {255, 255, 255, 255});
+        GameRenderer::drawText(g_renderer, "OUT OF AMMUNITION!", modalRect.x + 80, modalRect.y + 40, 2, { 255, 82, 82, 255 });
+        GameRenderer::drawText(g_renderer, "Targets Still Survived!", modalRect.x + 120, modalRect.y + 85, 1, { 203, 213, 225, 255 });
+
+        SDL_Rect repBtn = { modalRect.x + 145, modalRect.y + 140, 150, 48 };
+        SDL_SetRenderDrawColor(g_renderer, 239, 68, 68, 255);
+        SDL_RenderFillRect(g_renderer, &repBtn);
+        GameRenderer::drawText(g_renderer, "RETRY [R]", repBtn.x + 35, repBtn.y + 16, 1, { 255, 255, 255, 255 });
     }
-
-    // Draw Ammo Buttons (if slingshot)
-    if (g_currentTool == TOOL_SLINGSHOT) {
-        GameRenderer::drawText(g_renderer, "Ammo:", 300, 52, 1, {148, 163, 184, 255});
-        for (const auto& btn : g_ammoButtons) {
-            SDL_Rect r = { btn.x, btn.y, btn.w, btn.h };
-            if (btn.isSelected) {
-                SDL_SetRenderDrawColor(g_renderer, 13, 148, 136, 255); // Teal 600
-            } else {
-                SDL_SetRenderDrawColor(g_renderer, 30, 41, 59, 255);
-            }
-            SDL_RenderFillRect(g_renderer, &r);
-            SDL_SetRenderDrawColor(g_renderer, 71, 85, 105, 255);
-            SDL_RenderDrawRect(g_renderer, &r);
-
-            GameRenderer::drawText(g_renderer, btn.text, btn.x + 6, btn.y + 8, 1, {255, 255, 255, 255});
-        }
-    } else if (g_currentTool == TOOL_SPAWN) {
-        GameRenderer::drawText(g_renderer, "Item:", 300, 52, 1, {148, 163, 184, 255});
-        for (const auto& btn : g_spawnButtons) {
-            SDL_Rect r = { btn.x, btn.y, btn.w, btn.h };
-            if (btn.isSelected) {
-                SDL_SetRenderDrawColor(g_renderer, 5, 150, 105, 255); // Emerald 600
-            } else {
-                SDL_SetRenderDrawColor(g_renderer, 30, 41, 59, 255);
-            }
-            SDL_RenderFillRect(g_renderer, &r);
-            SDL_SetRenderDrawColor(g_renderer, 71, 85, 105, 255);
-            SDL_RenderDrawRect(g_renderer, &r);
-
-            GameRenderer::drawText(g_renderer, btn.text, btn.x + 5, btn.y + 8, 1, {255, 255, 255, 255});
-        }
-    }
-
-    // Telemetry & Stats (Right side of header)
-    std::stringstream ssStats;
-    ssStats << "FPS:" << g_fps << " | Bodies:" << g_world.bodies.size() << " | Joints:" << g_world.constraints.size()
-            << " | Targets:" << g_targetsDestroyed << "/" << g_targetsTotal;
-    GameRenderer::drawText(g_renderer, ssStats.str(), 620, 18, 1, {56, 189, 248, 255});
-
-    std::stringstream ssKeys;
-    ssKeys << "Hotkeys: [1-5] Levels | [R] Reset | [T] SlowMo | [G] Gravity | [TAB] Tool";
-    GameRenderer::drawText(g_renderer, ssKeys.str(), 620, 38, 1, {148, 163, 184, 255});
-
-    // Level Clear Banner
-    if (g_levelComplete) {
-        SDL_Rect bannerRect = { SCREEN_WIDTH / 2 - 160, 100, 320, 48 };
-        SDL_SetRenderDrawColor(g_renderer, 22, 101, 52, 230); // Green 800
-        SDL_RenderFillRect(g_renderer, &bannerRect);
-        SDL_SetRenderDrawColor(g_renderer, 74, 222, 128, 255);
-        SDL_RenderDrawRect(g_renderer, &bannerRect);
-
-        GameRenderer::drawText(g_renderer, "LEVEL COMPLETED!", SCREEN_WIDTH / 2 - 65, 114, 1, {255, 255, 255, 255});
-        GameRenderer::drawText(g_renderer, "Press [1-5] for next level", SCREEN_WIDTH / 2 - 80, 130, 1, {187, 247, 208, 255});
-    }
-
-    SDL_RenderPresent(g_renderer);
 }
 
 // -------------------------------------------------------------
-// Main Game Update Tick
+// Game Step & Win/Loss Evaluation
 // -------------------------------------------------------------
-static void mainLoopStep() {
+static void updateGame(float dt) {
+    g_world.step(dt);
+
+    // Track flight path of active bird
+    if (g_activeFlightBird && !g_activeFlightBird->isDead) {
+        g_flightTimer += dt;
+        if (g_lastFlightPath.empty() || Vector2::distance(g_lastFlightPath.back(), g_activeFlightBird->position) > 16.0f) {
+            g_lastFlightPath.push_back(g_activeFlightBird->position);
+        }
+
+        // Check if bird has stopped moving or fallen off map
+        float speed = g_activeFlightBird->velocity.length();
+        if (speed < 15.0f || g_activeFlightBird->position.x > SCREEN_WIDTH + 100.0f || g_activeFlightBird->position.y > SCREEN_HEIGHT + 100.0f) {
+            g_settleTimer += dt;
+        } else {
+            g_settleTimer = 0.0f;
+        }
+
+        if (g_settleTimer > 1.8f || g_flightTimer > 12.0f) {
+            g_activeFlightBird = nullptr;
+            g_settleTimer = 0.0f;
+
+            // Load next bird in queue
+            if (!g_ammoQueue.empty()) {
+                g_activeBirdType = g_ammoQueue.front();
+                g_ammoQueue.erase(g_ammoQueue.begin());
+            }
+        }
+    }
+
+    // Check Victory (All targets destroyed!)
+    if (g_world.targetsRemaining == 0 && !g_levelWon) {
+        g_levelWon = true;
+        // Bonus points for remaining birds
+        int bonus = (int)g_ammoQueue.size() * 10000;
+        if (bonus > 0) {
+            g_world.totalScore += bonus;
+            g_world.addScorePopup(g_slingshotPos + Vector2(0, -60), "+ " + std::to_string(bonus) + " AMMO BONUS!", 0x76FF03, 2.0f);
+        }
+        if (g_world.totalScore > g_highScores[g_currentLevel]) {
+            g_highScores[g_currentLevel] = g_world.totalScore;
+        }
+    }
+
+    // Check Defeat (Out of ammo and all physics settled)
+    if (!g_levelWon && !g_levelLost && g_world.targetsRemaining > 0) {
+        if (!g_activeFlightBird && g_ammoQueue.empty()) {
+            g_settleTimer += dt;
+            if (g_settleTimer > 2.5f) {
+                g_levelLost = true;
+            }
+        }
+    }
+}
+
+// -------------------------------------------------------------
+// Main Event Loop
+// -------------------------------------------------------------
+static void mainLoop() {
     uint32_t currentTime = SDL_GetTicks();
     float dt = (currentTime - g_lastTime) / 1000.0f;
-    if (dt > 0.04f) dt = 0.04f;
+    if (dt > 0.05f) dt = 0.05f; // Clamp delta time
     g_lastTime = currentTime;
 
-    // Track FPS
+    // FPS calculation
     g_frameCount++;
     if (currentTime - g_fpsTimer >= 1000) {
         g_fps = g_frameCount;
@@ -596,58 +573,114 @@ static void mainLoopStep() {
         g_fpsTimer = currentTime;
     }
 
-    // Process SDL Events
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_QUIT) {
+    // Input Handling
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
             g_isRunning = false;
-        } else if (e.type == SDL_MOUSEBUTTONDOWN) {
-            handleMouseDown(e.button.x, e.button.y, e.button.button);
-        } else if (e.type == SDL_MOUSEMOTION) {
-            handleMouseMove(e.motion.x, e.motion.y);
-        } else if (e.type == SDL_MOUSEBUTTONUP) {
-            handleMouseUp(e.button.x, e.button.y, e.button.button);
-        } else if (e.type == SDL_KEYDOWN) {
-            handleKeyDown(e.key.keysym.sym);
+        } else if (event.type == SDL_MOUSEBUTTONDOWN) {
+            int mx = event.button.x;
+            int my = event.button.y;
+
+            if (event.button.button == SDL_BUTTON_LEFT) {
+                // Check Header Level Select Buttons
+                if (my >= 16 && my <= 44 && mx >= 740 && mx <= 920) {
+                    int clickedLevel = (mx - 740) / 36 + 1;
+                    if (clickedLevel >= 1 && clickedLevel <= 5) {
+                        loadLevel(clickedLevel);
+                    }
+                    continue;
+                }
+
+                // Check Victory Next Level Button
+                if (g_levelWon) {
+                    SDL_Rect nextBtn = { SCREEN_WIDTH / 2 - 250 + 80, SCREEN_HEIGHT / 2 - 160 + 225, 150, 48 };
+                    if (mx >= nextBtn.x && mx <= nextBtn.x + nextBtn.w && my >= nextBtn.y && my <= nextBtn.y + nextBtn.h) {
+                        int nextLvl = (g_currentLevel < 5) ? g_currentLevel + 1 : 1;
+                        loadLevel(nextLvl);
+                        continue;
+                    }
+                }
+
+                // Check Defeat Retry Button
+                if (g_levelLost) {
+                    SDL_Rect repBtn = { SCREEN_WIDTH / 2 - 220 + 145, SCREEN_HEIGHT / 2 - 120 + 140, 150, 48 };
+                    if (mx >= repBtn.x && mx <= repBtn.x + repBtn.w && my >= repBtn.y && my <= repBtn.y + repBtn.h) {
+                        loadLevel(g_currentLevel);
+                        continue;
+                    }
+                }
+
+                // If a bird is currently flying, click triggers its special ability!
+                if (g_activeFlightBird && !g_activeFlightBird->isDead && !g_activeFlightBird->abilityUsed) {
+                    triggerBirdAbility();
+                } else if (!g_activeFlightBird && !g_levelWon && !g_levelLost) {
+                    // Check if clicking near slingshot to start aiming
+                    Vector2 clickPos((float)mx, (float)my);
+                    if (Vector2::distance(clickPos, g_slingshotPos) < 70.0f) {
+                        g_isAiming = true;
+                        g_aimPos = clickPos;
+                    }
+                }
+            }
+        } else if (event.type == SDL_MOUSEMOTION) {
+            if (g_isAiming) {
+                Vector2 mousePos((float)event.motion.x, (float)event.motion.y);
+                Vector2 pullOffset = mousePos - g_slingshotPos;
+                if (pullOffset.length() > MAX_PULL_DISTANCE) {
+                    pullOffset = pullOffset.normalized() * MAX_PULL_DISTANCE;
+                }
+                g_aimPos = g_slingshotPos + pullOffset;
+            }
+        } else if (event.type == SDL_MOUSEBUTTONUP) {
+            if (event.button.button == SDL_BUTTON_LEFT && g_isAiming) {
+                launchBird();
+            }
+        } else if (event.type == SDL_KEYDOWN) {
+            SDL_Keycode key = event.key.keysym.sym;
+            if (key >= SDLK_1 && key <= SDLK_5) {
+                loadLevel(key - SDLK_1 + 1);
+            } else if (key == SDLK_r) {
+                loadLevel(g_currentLevel);
+            } else if (key == SDLK_n) {
+                int nextLvl = (g_currentLevel < 5) ? g_currentLevel + 1 : 1;
+                loadLevel(nextLvl);
+            } else if (key == SDLK_t) {
+                g_world.timeScale = (g_world.timeScale < 1.0f) ? 1.0f : 0.25f;
+            } else if (key == SDLK_SPACE) {
+                if (g_activeFlightBird && !g_activeFlightBird->isDead && !g_activeFlightBird->abilityUsed) {
+                    triggerBirdAbility();
+                }
+            }
         }
     }
 
-    // Physics Step
-    g_world.step(dt);
+    // Step Physics & Update Gameplay
+    updateGame(dt);
 
-    // Target tracking
-    int remaining = 0;
-    for (const auto& b : g_world.bodies) {
-        if (b->isTarget && !b->isDead) {
-            remaining++;
-        }
-    }
-    g_targetsDestroyed = g_targetsTotal - remaining;
-    if (g_targetsTotal > 0 && remaining == 0 && !g_levelComplete) {
-        g_levelComplete = true;
-        g_score += 1000;
-    }
-
-    // Render Frame
-    renderFrame();
+    // Render Everything
+    SDL_SetRenderDrawColor(g_renderer, 15, 23, 42, 255);
+    SDL_RenderClear(g_renderer);
+    renderGame();
+    SDL_RenderPresent(g_renderer);
 }
 
 // -------------------------------------------------------------
 // Entry Point
 // -------------------------------------------------------------
 int main(int argc, char* argv[]) {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
         std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
         return 1;
     }
 
     g_window = SDL_CreateWindow(
-        "C++ Physics Engine (Emscripten / WebAssembly)",
+        "C++ Physics Catapult Game",
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED,
         SCREEN_WIDTH,
         SCREEN_HEIGHT,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI
     );
 
     if (!g_window) {
@@ -656,32 +689,30 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    g_renderer = SDL_CreateRenderer(
-        g_window,
-        -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-    );
-
+    g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (!g_renderer) {
         g_renderer = SDL_CreateRenderer(g_window, -1, SDL_RENDERER_SOFTWARE);
     }
 
-    initUIButtons();
+    // Initialize SVG -> PNG Texture Manager
+    if (!TextureManager::getInstance().init(g_renderer)) {
+        std::cerr << "Warning: TextureManager encountered issues during texture decoding." << std::endl;
+    }
+
+    // Load Initial Level
     loadLevel(1);
 
     g_lastTime = SDL_GetTicks();
     g_fpsTimer = g_lastTime;
 
 #ifdef __EMSCRIPTEN__
-    // 0 = simulate infinite loop via browser requestAnimationFrame
-    emscripten_set_main_loop(mainLoopStep, 0, 1);
+    emscripten_set_main_loop(mainLoop, 0, 1);
 #else
-    // Native Desktop Loop
     while (g_isRunning) {
-        mainLoopStep();
-        SDL_Delay(16);
+        mainLoop();
     }
 
+    TextureManager::getInstance().cleanup();
     SDL_DestroyRenderer(g_renderer);
     SDL_DestroyWindow(g_window);
     SDL_Quit();

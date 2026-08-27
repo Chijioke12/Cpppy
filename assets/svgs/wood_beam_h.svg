@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 28" width="120" height="28">
+      <defs>
+        <linearGradient id="woodBeam" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#BCAAA4"/>
+          <stop offset="30%" stop-color="#8D6E63"/>
+          <stop offset="70%" stop-color="#6D4C41"/>
+          <stop offset="100%" stop-color="#4E342E"/>
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="116" height="24" rx="3" fill="url(#woodBeam)" stroke="#3E2723" stroke-width="2"/>
+      <line x1="4" y1="10" x2="116" y2="10" stroke="#3E2723" stroke-width="1.2" opacity="0.6"/>
+      <line x1="4" y1="18" x2="116" y2="18" stroke="#3E2723" stroke-width="1.2" opacity="0.6"/>
+      <line x1="4" y1="4" x2="116" y2="4" stroke="#D7CCC8" stroke-width="1" opacity="0.8"/>
+      <!-- Nails -->
+      <circle cx="8" cy="14" r="1.8" fill="#37474F"/>
+      <circle cx="112" cy="14" r="1.8" fill="#37474F"/>
+    </svg>

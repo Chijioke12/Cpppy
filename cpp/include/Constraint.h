@@ -27,6 +27,7 @@ public:
     float damping;       // Damping coefficient
     float breakForce;    // Max tension before snapping
     bool isBroken;
+    bool isActive;
 
     // Visuals
     unsigned int color;
@@ -36,7 +37,7 @@ public:
                Vector2 _anchorA, Vector2 _anchorB, float _length = -1.0f)
         : id(_id), type(_type), bodyA(_a), bodyB(_b),
           localAnchorA(_anchorA), localAnchorB(_anchorB),
-          stiffness(200.0f), damping(5.0f), breakForce(50000.0f), isBroken(false),
+          stiffness(200.0f), damping(5.0f), breakForce(50000.0f), isBroken(false), isActive(true),
           color(0x9E9E9E), currentStress(0.0f)
     {
         Vector2 worldA = getWorldAnchorA();
@@ -75,8 +76,8 @@ public:
         return bodyB->position + localAnchorB.rotate(bodyB->angle);
     }
 
-    void solve(float dt) {
-        if (isBroken) return;
+    void solve(float dt = 0.016f) {
+        if (isBroken || !isActive) return;
         if (!bodyA && !bodyB) return;
 
         Vector2 pA = getWorldAnchorA();
@@ -116,6 +117,7 @@ public:
         // Break if exceeds limit
         if (tension > breakForce) {
             isBroken = true;
+            isActive = false;
             return;
         }
 
@@ -131,7 +133,7 @@ public:
 
     // Positional relaxation pass for stiff rods and ragdoll joints
     void solvePosition() {
-        if (isBroken) return;
+        if (isBroken || !isActive) return;
         if (type != CONSTRAINT_ROD && type != CONSTRAINT_WELD) return;
 
         Vector2 pA = getWorldAnchorA();
@@ -152,11 +154,11 @@ public:
 
         if (bodyA && bodyA->bodyType == BODY_DYNAMIC) {
             bodyA->position += correction * invM_A;
-            bodyA->updateTransform();
+            bodyA->updateWorldVertices();
         }
         if (bodyB && bodyB->bodyType == BODY_DYNAMIC) {
             bodyB->position -= correction * invM_B;
-            bodyB->updateTransform();
+            bodyB->updateWorldVertices();
         }
     }
 };
