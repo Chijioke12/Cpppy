@@ -424,19 +424,19 @@ static void renderGame() {
 
     // In-Flight Special Ability Banner Hint
     if (g_activeFlightBird && !g_activeFlightBird->isDead && !g_activeFlightBird->abilityUsed) {
-        SDL_Rect tipRect = { SCREEN_WIDTH / 2 - 200, 80, 400, 32 };
+        SDL_Rect tipRect = { SCREEN_WIDTH / 2 - 210, 80, 420, 36 };
         SDL_SetRenderDrawColor(g_renderer, 220, 38, 38, 230);
         SDL_RenderFillRect(g_renderer, &tipRect);
         SDL_SetRenderDrawColor(g_renderer, 254, 240, 138, 255);
         SDL_RenderDrawRect(g_renderer, &tipRect);
 
-        std::string abilityHint = "CLICK / SPACE TO ACTIVATE ABILITY!";
-        if (g_activeBirdType == 1) abilityHint = "CLICK / SPACE TO DETONATE BOMB!";
-        if (g_activeBirdType == 2) abilityHint = "CLICK / SPACE TO TRIPLE SPLIT!";
-        if (g_activeBirdType == 3) abilityHint = "CLICK / SPACE TO DRILL THRUST!";
-        if (g_activeBirdType == 4) abilityHint = "CLICK / SPACE TO SLAM BOUNCE!";
+        std::string abilityHint = "PRESS ENTER / CLICK: SPECIAL ABILITY!";
+        if (g_activeBirdType == 1) abilityHint = "PRESS ENTER / CLICK: DETONATE BOMB!";
+        if (g_activeBirdType == 2) abilityHint = "PRESS ENTER / CLICK: TRIPLE SPLIT!";
+        if (g_activeBirdType == 3) abilityHint = "PRESS ENTER / CLICK: DRILL THRUST!";
+        if (g_activeBirdType == 4) abilityHint = "PRESS ENTER / CLICK: SLAM BOUNCE!";
 
-        GameRenderer::drawText(g_renderer, abilityHint, tipRect.x + 24, tipRect.y + 9, 1, { 255, 255, 255, 255 });
+        GameRenderer::drawText(g_renderer, abilityHint, tipRect.x + 18, tipRect.y + 10, 1, { 255, 255, 255, 255 });
     }
 
     // -------------------------------------------------------------
