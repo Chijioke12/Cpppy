@@ -782,9 +782,13 @@ struct EmbeddedAsset {
   for (const [key, meta] of Object.entries(assetMetadata)) {
     cppHeader += `static const uint8_t ASSET_${key.toUpperCase()}_PNG[] = {\n    `;
     const bytes = meta.pngBuffer;
-    for (let i = 0; i < bytes.length; i++) {
-      cppHeader += `0x${bytes[i].toString(16).padStart(2, '0')}, `;
-      if ((i + 1) % 16 === 0) cppHeader += '\n    ';
+    const hexBytes = bytes.map(b => `0x${b.toString(16).padStart(2, '0')}`);
+    for (let i = 0; i < hexBytes.length; i++) {
+      cppHeader += hexBytes[i];
+      if (i < hexBytes.length - 1) {
+        cppHeader += ', ';
+        if ((i + 1) % 16 === 0) cppHeader += '\n    ';
+      }
     }
     cppHeader += `\n};\n\n`;
   }
